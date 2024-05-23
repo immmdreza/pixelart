@@ -1,3 +1,5 @@
+use image::{Rgb, Rgba};
+
 /// An interface for [`PixelColor`].
 pub trait PixelColorInterface {
     fn r(&self) -> u8;
@@ -5,6 +7,14 @@ pub trait PixelColorInterface {
     fn g(&self) -> u8;
 
     fn b(&self) -> u8;
+
+    fn rgb(&self) -> Rgb<u8> {
+        Rgb([self.r(), self.g(), self.b()])
+    }
+
+    fn rgba(&self) -> Rgba<u8> {
+        Rgba([self.r(), self.g(), self.b(), u8::MAX])
+    }
 }
 
 /// Simple RGB color of a pixel.

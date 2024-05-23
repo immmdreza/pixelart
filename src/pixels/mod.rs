@@ -84,8 +84,8 @@ where
     }
 }
 
-/// A set of extension methods for a read-only iterator over [`Pixel`]s.
-pub trait PixelIterExt<'p, Item: PixelInterface>: Iterator<Item = Item> {
+/// A set of extension methods for a shared (owned, ref, mut) iterator over [`Pixel`]s.
+pub trait PixelIterExt<Item: PixelInterface>: Iterator<Item = Item> {
     /// Filter pixels using their [`PixelColor`].
     fn filter_color(self, color: impl IntoPixelColor) -> impl Iterator<Item = Item>
     where
@@ -94,8 +94,33 @@ pub trait PixelIterExt<'p, Item: PixelInterface>: Iterator<Item = Item> {
         let color = color.into_pixel_color();
         self.filter(move |pixel| pixel.color() == &color)
     }
+
+    /// Filter pixels based on their [`PixelPosition`].
+    fn filter_position<P>(self, mut predicate: P) -> impl Iterator<Item = Item>
+    where
+        Self: Sized,
+        P: FnMut(&PixelPosition) -> bool,
+    {
+        self.filter(move |pixel| predicate(pixel.position()))
+    }
 }
 
-impl<'p, T> PixelIterExt<'p, Pixel> for T where T: Iterator<Item = Pixel> {}
-impl<'p, T> PixelIterExt<'p, &'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
-impl<'p, T> PixelIterExt<'p, &'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
+impl<'p, T> PixelIterExt<Pixel> for T where T: Iterator<Item = Pixel> {}
+impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
+impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
+
+/// A set of extension methods for a mutable only iterator over [`Pixel`]s.
+pub trait PixelIterMutExt<'p, Item: PixelInterface>: Iterator<Item = &'p mut Pixel> {
+    /// Updates the [`PixelColor`] for all of this iterator members.
+    fn update_colors(self, color: impl IntoPixelColor)
+    where
+        Self: Sized,
+    {
+        let color = color.into_pixel_color();
+        self.for_each(move |pixel| {
+            pixel.update_color(color.clone());
+        })
+    }
+}
+
+impl<'p, T> PixelIterMutExt<'p, &'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}

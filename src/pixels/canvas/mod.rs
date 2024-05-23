@@ -1,7 +1,8 @@
 //! Module contains types related to a [`PixelCanvas`].
 
-use self::table::PixelTable;
+use self::{image::PixelImageBuilder, table::PixelTable};
 
+pub mod image;
 pub mod row;
 pub mod table;
 
@@ -34,7 +35,21 @@ impl<const H: usize, const W: usize> PixelCanvasInterface<H, W> for PixelCanvas<
 }
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
-pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H, W> {}
+pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H, W> {
+    fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new(self, style)
+    }
+
+    fn image_builder_default_style(&self) -> PixelImageBuilder<H, W, Self>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new_default_style(self)
+    }
+}
 
 impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
     T: PixelCanvasInterface<H, W>
