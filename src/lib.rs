@@ -6,6 +6,7 @@ mod tests {
         canvas::{PixelCanvas, PixelCanvasInterface},
         color::{PixelColor, PixelColorExt},
         position::CommonStrictPositions,
+        PixelInterface, PixelIterExt,
     };
 
     #[test]
@@ -23,5 +24,8 @@ mod tests {
         let prev_color: PixelColor = table[pos].update_color(PixelColor::BLACK);
         assert_eq!(prev_color, PixelColor::WHITE);
         assert_eq!(table[pos].color(), &PixelColor::BLACK);
+
+        let black_pixels: usize = table.iter_pixels().filter_color(PixelColor::BLACK).count();
+        assert_eq!(black_pixels, 1)
     }
 }

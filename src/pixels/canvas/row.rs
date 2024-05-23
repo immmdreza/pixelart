@@ -49,3 +49,34 @@ impl<const W: usize> std::ops::Index<usize> for PixelRow<W> {
         &self.pixels[index]
     }
 }
+
+/// A set of extension methods for a read-only iterator over [`PixelRow`].
+pub trait PixelRowIterExt<'p, const W: usize>: Iterator<Item = &'p PixelRow<W>> {
+    /// Filter rows based on index of the row.
+    fn filter_row<P>(self, mut predicate: P) -> impl Iterator<Item = &'p PixelRow<W>>
+    where
+        Self: Sized,
+        P: FnMut(usize) -> bool,
+    {
+        self.filter(move |row| predicate(row.row))
+    }
+}
+
+impl<'p, const W: usize, T> PixelRowIterExt<'p, W> for T where T: Iterator<Item = &'p PixelRow<W>> {}
+
+/// A set of extension methods for a mutable iterator over [`PixelRow`].
+pub trait PixelRowIterMutExt<'p, const W: usize>: Iterator<Item = &'p mut PixelRow<W>> {
+    /// Filter rows based on index of the row.
+    fn filter_row<P>(self, mut predicate: P) -> impl Iterator<Item = &'p mut PixelRow<W>>
+    where
+        Self: Sized,
+        P: FnMut(usize) -> bool,
+    {
+        self.filter(move |row| predicate(row.row))
+    }
+}
+
+impl<'p, const W: usize, T> PixelRowIterMutExt<'p, W> for T where
+    T: Iterator<Item = &'p mut PixelRow<W>>
+{
+}

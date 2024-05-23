@@ -167,6 +167,33 @@ pub struct PixelStrictPosition<const H: usize, const W: usize> {
     raw: PixelPosition,
 }
 
+impl<const H: usize, const W: usize> Iterator for PixelStrictPosition<H, W> {
+    type Item = PixelStrictPosition<H, W>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        // Going right by one to see what happens ...
+        let next = self.bounding_right(1);
+        if next.column() == self.column() {
+            // Reached right border, should go down by one ...
+            let next = self.bounding_down(1);
+            if next.row() == self.row() {
+                // Even moving down is not possible! nowhere no go.
+                None
+            } else {
+                // Starting the next row from the beginning (column: 0).
+                *self = PixelStrictPosition {
+                    raw: PixelPosition::new(next.row(), 0),
+                };
+                Some(self.clone())
+            }
+        } else {
+            // We can safely go right by one.
+            *self = next.clone();
+            Some(next)
+        }
+    }
+}
+
 impl<const H: usize, const W: usize> PixelStrictPosition<H, W> {
     /// Create a new [`PixelStrictPosition`].
     ///
@@ -333,5 +360,30 @@ mod tests {
             },
             pos.bounding_right(5)
         );
+    }
+
+    #[test]
+    fn test_iter() {
+        let mut pos = PixelStrictPosition::<2, 2>::new(0, 0).unwrap();
+
+        assert_eq!(
+            Some(PixelStrictPosition {
+                raw: PixelPosition::new(0, 1)
+            }),
+            pos.next()
+        );
+        assert_eq!(
+            Some(PixelStrictPosition {
+                raw: PixelPosition::new(1, 0)
+            }),
+            pos.next()
+        );
+        assert_eq!(
+            Some(PixelStrictPosition {
+                raw: PixelPosition::new(1, 1)
+            }),
+            pos.next()
+        );
+        assert_eq!(None, pos.next());
     }
 }
