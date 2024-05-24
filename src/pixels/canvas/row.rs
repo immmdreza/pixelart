@@ -4,16 +4,16 @@
 
 use std::{array, fmt::Display};
 
-use crate::pixels::{color::IntoPixelColor, position::PixelPosition, Pixel};
+use crate::pixels::{color::IntoPixelColor, position::PixelPosition, Pixel, PixelInterface};
 /// Represents a row of [`Pixel`]s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PixelRow<const W: usize> {
+pub struct PixelRow<const W: usize, P: PixelInterface> {
     /// Row number staring from 0. (row index)
     pub(super) row: usize,
-    pub(super) pixels: [Pixel; W],
+    pub(super) pixels: [P; W],
 }
 
-impl<const W: usize> Display for PixelRow<W> {
+impl<const W: usize, P: PixelInterface + Display> Display for PixelRow<W, P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("[")?;
         for pix in self.iter() {
@@ -23,7 +23,7 @@ impl<const W: usize> Display for PixelRow<W> {
     }
 }
 
-impl<const W: usize> PixelRow<W> {
+impl<const W: usize> PixelRow<W, Pixel> {
     pub fn new(row: usize, fill_color: impl IntoPixelColor) -> Self {
         let color = fill_color.into_pixel_color();
         Self {
@@ -35,22 +35,22 @@ impl<const W: usize> PixelRow<W> {
     }
 }
 
-impl<const W: usize> std::ops::DerefMut for PixelRow<W> {
+impl<const W: usize, P: PixelInterface> std::ops::DerefMut for PixelRow<W, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.pixels
     }
 }
 
-impl<const W: usize> std::ops::Deref for PixelRow<W> {
-    type Target = [Pixel; W];
+impl<const W: usize, P: PixelInterface> std::ops::Deref for PixelRow<W, P> {
+    type Target = [P; W];
 
     fn deref(&self) -> &Self::Target {
         &self.pixels
     }
 }
 
-impl<const W: usize> IntoIterator for PixelRow<W> {
-    type Item = Pixel;
+impl<const W: usize, P: PixelInterface> IntoIterator for PixelRow<W, P> {
+    type Item = P;
     type IntoIter = array::IntoIter<Self::Item, W>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -58,14 +58,14 @@ impl<const W: usize> IntoIterator for PixelRow<W> {
     }
 }
 
-impl<const W: usize> std::ops::IndexMut<usize> for PixelRow<W> {
+impl<const W: usize, P: PixelInterface> std::ops::IndexMut<usize> for PixelRow<W, P> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.pixels[index]
     }
 }
 
-impl<const W: usize> std::ops::Index<usize> for PixelRow<W> {
-    type Output = Pixel;
+impl<const W: usize, P: PixelInterface> std::ops::Index<usize> for PixelRow<W, P> {
+    type Output = P;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.pixels[index]
@@ -73,33 +73,40 @@ impl<const W: usize> std::ops::Index<usize> for PixelRow<W> {
 }
 
 /// A set of extension methods for a read-only iterator over [`PixelRow`].
-pub trait PixelRowIterExt<'p, const W: usize>: Iterator<Item = &'p PixelRow<W>> {
+pub trait PixelRowIterExt<'p, const W: usize, P: PixelInterface + 'static>:
+    Iterator<Item = &'p PixelRow<W, P>>
+{
     /// Filter rows based on index of the row.
-    fn filter_row<P>(self, mut predicate: P) -> impl Iterator<Item = &'p PixelRow<W>>
+    fn filter_row<F>(self, mut predicate: F) -> impl Iterator<Item = &'p PixelRow<W, P>>
     where
         Self: Sized,
-        P: FnMut(usize) -> bool,
+        F: FnMut(usize) -> bool,
     {
         self.filter(move |row| predicate(row.row))
     }
 }
 
-impl<'p, const W: usize, T> PixelRowIterExt<'p, W> for T where T: Iterator<Item = &'p PixelRow<W>> {}
+impl<'p, const W: usize, T, P: PixelInterface + 'static> PixelRowIterExt<'p, W, P> for T where
+    T: Iterator<Item = &'p PixelRow<W, P>>
+{
+}
 
 /// A set of extension methods for a mutable iterator over [`PixelRow`].
-pub trait PixelRowIterMutExt<'p, const W: usize>: Iterator<Item = &'p mut PixelRow<W>> {
+pub trait PixelRowIterMutExt<'p, const W: usize, P: PixelInterface + 'static>:
+    Iterator<Item = &'p mut PixelRow<W, P>>
+{
     /// Filter rows based on index of the row.
-    fn filter_row<P>(self, mut predicate: P) -> impl Iterator<Item = &'p mut PixelRow<W>>
+    fn filter_row<R>(self, mut predicate: R) -> impl Iterator<Item = &'p mut PixelRow<W, P>>
     where
         Self: Sized,
-        P: FnMut(usize) -> bool,
+        R: FnMut(usize) -> bool,
     {
         self.filter(move |row| predicate(row.row))
     }
 }
 
-impl<'p, const W: usize, T> PixelRowIterMutExt<'p, W> for T where
-    T: Iterator<Item = &'p mut PixelRow<W>>
+impl<'p, const W: usize, T, P: PixelInterface + 'static> PixelRowIterMutExt<'p, W, P> for T where
+    T: Iterator<Item = &'p mut PixelRow<W, P>>
 {
 }
 
@@ -112,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let mut r = PixelRow::<2>::new(0, PixelColor::default());
+        let mut r = PixelRow::<2, Pixel>::new(0, PixelColor::default());
         let _s = r.as_mut_slice();
     }
 }

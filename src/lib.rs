@@ -6,7 +6,7 @@ mod tests {
         canvas::{image::PixelImageStyle, PixelCanvas, PixelCanvasExt},
         color::{PixelColor, PixelColorExt},
         position::{PixelPositionInterface, StrictPositions},
-        PixelInterface, PixelIterExt, PixelIterMutExt,
+        PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
     };
 
     #[test]

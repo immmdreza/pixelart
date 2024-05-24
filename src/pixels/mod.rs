@@ -20,6 +20,13 @@ pub trait PixelInterface {
     fn position(&self) -> &PixelPosition;
 }
 
+pub trait PixelMutInterface: PixelInterface {
+    /// Updates the [`PixelColor`] of this [`Pixel`].
+    ///
+    /// Returning the previous color.
+    fn update_color(&mut self, color: impl IntoPixelColor) -> PixelColor;
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pixel {
     color: PixelColor,
@@ -43,6 +50,12 @@ impl PixelInterface for Pixel {
     }
 }
 
+impl PixelMutInterface for Pixel {
+    fn update_color(&mut self, color: impl IntoPixelColor) -> PixelColor {
+        std::mem::replace(&mut self.color, color.into_pixel_color())
+    }
+}
+
 impl PixelInterface for &Pixel {
     fn color(&self) -> &PixelColor {
         &self.color
@@ -63,19 +76,18 @@ impl PixelInterface for &mut Pixel {
     }
 }
 
+impl PixelMutInterface for &mut Pixel {
+    fn update_color(&mut self, color: impl IntoPixelColor) -> PixelColor {
+        std::mem::replace(&mut self.color, color.into_pixel_color())
+    }
+}
+
 impl Pixel {
     pub fn new(color: impl IntoPixelColor, pos: impl Into<PixelPosition>) -> Self {
         Self {
             color: color.into_pixel_color(),
             position: pos.into(),
         }
-    }
-
-    /// Updates the [`PixelColor`] of this [`Pixel`].
-    ///
-    /// Returning the previous color.
-    pub fn update_color(&mut self, color: impl IntoPixelColor) -> PixelColor {
-        std::mem::replace(&mut self.color, color.into_pixel_color())
     }
 }
 

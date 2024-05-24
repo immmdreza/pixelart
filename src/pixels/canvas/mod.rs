@@ -5,7 +5,7 @@ use self::{image::PixelImageBuilder, table::PixelTable};
 use super::{
     color::{IntoPixelColor, PixelColor},
     position::{IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle},
-    PixelInterface,
+    Pixel, PixelInterface, PixelMutInterface,
 };
 
 pub mod image;
@@ -15,22 +15,30 @@ pub mod table;
 /// Interface that any pixel canvas may want to implement.
 ///
 /// Using this we can have access to later extension methods.
-pub trait PixelCanvasInterface<const H: usize, const W: usize> {
+pub trait PixelCanvasInterface<const H: usize, const W: usize, P: PixelInterface> {
     /// A read-only reference to underlying [`PixelTable`].
-    fn table(&self) -> &PixelTable<H, W>;
+    fn table(&self) -> &PixelTable<H, W, P>;
 
     /// A mutable reference to underlying [`PixelTable`].
-    fn table_mut(&mut self) -> &mut PixelTable<H, W>;
+    fn table_mut(&mut self) -> &mut PixelTable<H, W, P>;
 }
 
 /// A [`PixelCanvas`], the highest level api to work and clear interact
 /// with the underlying [`PixelTable`] and pixels.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub struct PixelCanvas<const H: usize, const W: usize = H> {
-    table: PixelTable<H, W>,
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PixelCanvas<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
+    table: PixelTable<H, W, P>,
 }
 
-impl<const H: usize, const W: usize> PixelCanvas<H, W> {
+impl<const H: usize, const W: usize> Default for PixelCanvas<H, W, Pixel> {
+    fn default() -> Self {
+        Self {
+            table: Default::default(),
+        }
+    }
+}
+
+impl<const H: usize, const W: usize> PixelCanvas<H, W, Pixel> {
     pub fn new(fill_color: impl IntoPixelColor + Clone) -> Self {
         Self {
             table: PixelTable::new(fill_color),
@@ -38,42 +46,53 @@ impl<const H: usize, const W: usize> PixelCanvas<H, W> {
     }
 }
 
-impl<const H: usize, const W: usize> std::ops::Deref for PixelCanvas<H, W> {
-    type Target = PixelTable<H, W>;
+impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Deref for PixelCanvas<H, W, P> {
+    type Target = PixelTable<H, W, P>;
 
     fn deref(&self) -> &Self::Target {
         &self.table
     }
 }
 
-impl<const H: usize, const W: usize> std::ops::DerefMut for PixelCanvas<H, W> {
+impl<const H: usize, const W: usize, P: PixelInterface> std::ops::DerefMut
+    for PixelCanvas<H, W, P>
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.table
     }
 }
 
-impl<const H: usize, const W: usize> PixelCanvasInterface<H, W> for PixelCanvas<H, W> {
-    fn table(&self) -> &PixelTable<H, W> {
+impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvasInterface<H, W, P>
+    for PixelCanvas<H, W, P>
+{
+    fn table(&self) -> &PixelTable<H, W, P> {
         &self.table
     }
 
-    fn table_mut(&mut self) -> &mut PixelTable<H, W> {
+    fn table_mut(&mut self) -> &mut PixelTable<H, W, P> {
         &mut self.table
     }
 }
 
-impl<const H: usize, const W: usize> PixelCanvasInterface<H, W> for &mut PixelCanvas<H, W> {
-    fn table(&self) -> &PixelTable<H, W> {
+impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvasInterface<H, W, P>
+    for &mut PixelCanvas<H, W, P>
+{
+    fn table(&self) -> &PixelTable<H, W, P> {
         &self.table
     }
 
-    fn table_mut(&mut self) -> &mut PixelTable<H, W> {
+    fn table_mut(&mut self) -> &mut PixelTable<H, W, P> {
         &mut self.table
     }
 }
 
-fn _fill_inside<const H: usize, const W: usize, P: PixelCanvasExt<H, W>>(
-    canvas: &mut P,
+fn _fill_inside<
+    const H: usize,
+    const W: usize,
+    P: PixelMutInterface,
+    I: PixelCanvasExt<H, W, P>,
+>(
+    canvas: &mut I,
     base_color: Option<PixelColor>,
     color: impl IntoPixelColor,
     point_inside: impl IntoPixelStrictPosition<H, W>,
@@ -95,7 +114,41 @@ fn _fill_inside<const H: usize, const W: usize, P: PixelCanvasExt<H, W>>(
 }
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
-pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H, W> {
+pub trait PixelCanvasExt<const H: usize, const W: usize, P: PixelInterface>:
+    PixelCanvasInterface<H, W, P>
+{
+    fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self, P>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new(self, style)
+    }
+
+    fn image_builder_default(&self) -> PixelImageBuilder<H, W, Self, P>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new_default_style(self)
+    }
+
+    /// Gets the color of a pixel at given position.
+    fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &PixelColor
+    where
+        P: 'a,
+    {
+        self.table()[pos].color()
+    }
+}
+
+impl<const H: usize, const W: usize, T, P: PixelInterface> PixelCanvasExt<H, W, P> for T where
+    T: PixelCanvasInterface<H, W, P>
+{
+}
+
+/// Extensions for any type that implements [`PixelCanvasInterface`].
+pub trait PixelCanvasMutExt<const H: usize, const W: usize, P: PixelMutInterface>:
+    PixelCanvasInterface<H, W, P>
+{
     /// Updates every pixel's color to default which is white.
     fn clear(&mut self) {
         self.fill(PixelColor::default())
@@ -107,25 +160,6 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H
         self.table_mut().for_each_pixel_mut(|pixel| {
             pixel.update_color(color.clone());
         })
-    }
-
-    fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self>
-    where
-        Self: Sized,
-    {
-        PixelImageBuilder::new(self, style)
-    }
-
-    fn image_builder_default(&self) -> PixelImageBuilder<H, W, Self>
-    where
-        Self: Sized,
-    {
-        PixelImageBuilder::new_default_style(self)
-    }
-
-    /// Gets the color of a pixel at given position.
-    fn color_at(&self, pos: impl PixelStrictPositionInterface<H, W>) -> &PixelColor {
-        self.table()[pos].color()
     }
 
     /// Update color of a pixel at the given position.
@@ -145,12 +179,12 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H
     ) where
         Self: Sized,
     {
-        _fill_inside::<H, W, _>(self, None, color, point_inside)
+        _fill_inside::<H, W, P, _>(self, None, color, point_inside)
     }
 }
 
-impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
-    T: PixelCanvasInterface<H, W>
+impl<const H: usize, const W: usize, T, P: PixelMutInterface> PixelCanvasMutExt<H, W, P> for T where
+    T: PixelCanvasInterface<H, W, P>
 {
 }
 
