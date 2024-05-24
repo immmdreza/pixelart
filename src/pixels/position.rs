@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 /// Interface for a pixel position.
@@ -16,9 +18,7 @@ pub trait PixelPositionInterface {
     /// Convert this [`PixelPosition`] to a [`PixelStrictPosition`].
     ///
     /// Returns [`PixelPositionOutOfBoundError`] error if provided row or column are out of bound,
-    fn bound<const H: usize, const W: usize>(
-        &self,
-    ) -> Result<PixelStrictPosition<H, W>, PixelPositionOutOfBoundError<H, W>> {
+    fn bound<const H: usize, const W: usize>(&self) -> StrictPositionValidationResult<H, W> {
         PixelStrictPosition::new(self.row(), self.column())
     }
 
@@ -47,6 +47,16 @@ pub trait PixelPositionInterface {
     fn right(&self, amount: usize) -> PixelPosition {
         PixelPosition::new(self.row(), self.column().wrapping_add(amount))
     }
+
+    /// Returns a [`PixelPosition`] at the [`Direction`] side of this one as far as possible.
+    fn direction(&self, dir: Direction, amount: usize) -> PixelPosition {
+        match dir {
+            Direction::Up => self.up(amount),
+            Direction::Right => self.right(amount),
+            Direction::Down => self.down(amount),
+            Direction::Left => self.left(amount),
+        }
+    }
 }
 
 /// Interface for a pixel position.
@@ -69,43 +79,72 @@ pub trait PixelStrictPositionInterface<const H: usize, const W: usize> {
         PixelPosition::new(self.row(), self.column())
     }
 
+    /// Returns a [`PixelStrictPosition`] above this one **IF** its possible.
+    fn checked_up(&self, amount: usize) -> StrictPositionValidationResult<H, W> {
+        self.unbound().up(amount).bound()
+    }
+
+    /// Returns a [`PixelStrictPosition`] at the left side of this one **IF** its possible.
+    fn checked_left(&self, amount: usize) -> StrictPositionValidationResult<H, W> {
+        self.unbound().left(amount).bound()
+    }
+
+    /// Returns a [`PixelStrictPosition`] below this one **IF** its possible.
+    fn checked_down(&self, amount: usize) -> StrictPositionValidationResult<H, W> {
+        self.unbound().down(amount).bound()
+    }
+
+    /// Returns a [`PixelStrictPosition`] at the right side of this one **IF** its possible.
+    fn checked_right(&self, amount: usize) -> StrictPositionValidationResult<H, W> {
+        self.unbound().right(amount).bound()
+    }
+
+    /// Returns a [`PixelStrictPosition`] at the [`Direction`] side of this one **IF** its possible.
+    fn checked_direction(
+        &self,
+        dir: Direction,
+        amount: usize,
+    ) -> StrictPositionValidationResult<H, W> {
+        self.unbound().direction(dir, amount).bound()
+    }
+
     /// Returns a [`PixelStrictPosition`] above this one as far as possible (0).
     fn bounding_up(&self, amount: usize) -> PixelStrictPosition<H, W> {
-        self.unbound()
-            .up(amount)
-            .bound()
-            .unwrap_or_else(|e| e.adjust())
+        self.checked_up(amount).unwrap_or_else(|e| e.adjust())
     }
 
     /// Returns a [`PixelStrictPosition`] at the left side of this one as far as possible (0).
     fn bounding_left(&self, amount: usize) -> PixelStrictPosition<H, W> {
-        self.unbound()
-            .left(amount)
-            .bound()
-            .unwrap_or_else(|e| e.adjust())
+        self.checked_left(amount).unwrap_or_else(|e| e.adjust())
     }
 
     /// Returns a [`PixelStrictPosition`] below this one as far as possible.
     fn bounding_down(&self, amount: usize) -> PixelStrictPosition<H, W> {
-        self.unbound()
-            .down(amount)
-            .bound()
-            .unwrap_or_else(|e| e.adjust())
+        self.checked_down(amount).unwrap_or_else(|e| e.adjust())
     }
 
     /// Returns a [`PixelStrictPosition`] at the right side of this one as far as possible.
     fn bounding_right(&self, amount: usize) -> PixelStrictPosition<H, W> {
-        self.unbound()
-            .right(amount)
-            .bound()
+        self.checked_right(amount).unwrap_or_else(|e| e.adjust())
+    }
+
+    /// Returns a [`PixelStrictPosition`] at the [`Direction`] side of this one as far as possible.
+    fn bounding_direction(&self, dir: Direction, amount: usize) -> PixelStrictPosition<H, W> {
+        self.checked_direction(dir, amount)
             .unwrap_or_else(|e| e.adjust())
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelPosition {
     row: usize,
     column: usize,
+}
+
+impl Display for PixelPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.row, self.column)
+    }
 }
 
 impl PixelPosition {
@@ -124,6 +163,9 @@ impl PixelPositionInterface for PixelPosition {
     }
 }
 
+pub type StrictPositionValidationResult<const H: usize, const W: usize> =
+    Result<PixelStrictPosition<H, W>, PixelPositionOutOfBoundError<H, W>>;
+
 #[derive(Debug, Error)]
 pub enum PixelPositionOutOfBoundError<const H: usize, const W: usize> {
     #[error("The provided row value {0:?} is equal or more that row bound ({H}).")]
@@ -135,10 +177,7 @@ pub enum PixelPositionOutOfBoundError<const H: usize, const W: usize> {
 }
 
 impl<const H: usize, const W: usize> PixelPositionOutOfBoundError<H, W> {
-    pub fn validate_position(
-        row: usize,
-        column: usize,
-    ) -> Result<PixelStrictPosition<H, W>, PixelPositionOutOfBoundError<H, W>> {
+    pub fn validate_position(row: usize, column: usize) -> StrictPositionValidationResult<H, W> {
         use std::cmp::Ordering::*;
         use PixelPositionOutOfBoundError::*;
 
@@ -162,7 +201,7 @@ impl<const H: usize, const W: usize> PixelPositionOutOfBoundError<H, W> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelStrictPosition<const H: usize, const W: usize> {
     raw: PixelPosition,
 }
@@ -245,10 +284,10 @@ pub trait IntoPixelStrictPosition<const H: usize, const W: usize> {
 
 impl<const H: usize, const W: usize, T> IntoPixelStrictPosition<H, W> for T
 where
-    T: Into<PixelStrictPosition<H, W>>,
+    T: PixelStrictPositionInterface<H, W>,
 {
     fn into_pixel_strict_position(self) -> PixelStrictPosition<H, W> {
-        self.into()
+        PixelStrictPosition::new(self.row(), self.column()).unwrap()
     }
 }
 
@@ -312,6 +351,71 @@ impl<const H: usize, const W: usize> PixelStrictPositionInterface<H, W> for Stri
             RightCenter => W - 1,
             BottomCenter => W / 2,
             LeftCenter => 0,
+        }
+    }
+}
+
+/// Represents a direction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Direction {
+    /// Going up.
+    Up,
+
+    /// Going right.
+    Right,
+
+    /// Going down.
+    Down,
+
+    /// Going left.
+    Left,
+}
+
+impl Iterator for Direction {
+    type Item = Direction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use Direction::*;
+        match self {
+            Up => Right,
+            Right => Down,
+            Down => Left,
+            Left => Up,
+        }
+        .into()
+    }
+}
+
+pub struct SingleCycle {
+    initial_dir: Direction,
+    current: Option<Direction>,
+}
+
+impl SingleCycle {
+    pub fn new(initial_dir: Direction) -> Self {
+        Self {
+            initial_dir,
+            current: None,
+        }
+    }
+}
+
+impl Iterator for SingleCycle {
+    type Item = Direction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(mut current) = self.current {
+            let next = current.next().unwrap();
+
+            if next == self.initial_dir {
+                return None;
+            }
+
+            self.current = Some(next);
+            self.current
+        } else {
+            self.current = Some(self.initial_dir);
+            Some(self.initial_dir)
         }
     }
 }
@@ -385,5 +489,17 @@ mod tests {
             pos.next()
         );
         assert_eq!(None, pos.next());
+    }
+
+    #[test]
+    fn test_direction_single_cycle() {
+        use Direction::*;
+        let mut single = SingleCycle::new(Down);
+
+        assert_eq!(Some(Down), single.next());
+        assert_eq!(Some(Left), single.next());
+        assert_eq!(Some(Up), single.next());
+        assert_eq!(Some(Right), single.next());
+        assert_eq!(None, single.next());
     }
 }

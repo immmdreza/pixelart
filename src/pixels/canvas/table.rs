@@ -2,9 +2,10 @@
 //! [PixelCanvas](`super::PixelCanvas`)
 //!
 
-use std::array;
+use std::{array, fmt::Display};
 
 use crate::pixels::{
+    color::{IntoPixelColor, PixelColor},
     position::{PixelPosition, PixelPositionInterface, PixelStrictPositionInterface},
     Pixel,
 };
@@ -17,10 +18,19 @@ pub struct PixelTable<const H: usize, const W: usize = H> {
     pixels: [PixelRow<W>; H],
 }
 
+impl<const H: usize, const W: usize> Display for PixelTable<H, W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for pix in self.iter() {
+            write!(f, "{}\n", pix)?;
+        }
+        Ok(())
+    }
+}
+
 impl<const H: usize, const W: usize> PixelTable<H, W> {
-    pub fn new() -> Self {
+    pub fn new(fill_color: impl IntoPixelColor + Clone) -> Self {
         Self {
-            pixels: array::from_fn(|row| PixelRow::new(row)),
+            pixels: array::from_fn(|row| PixelRow::new(row, fill_color.clone())),
         }
     }
 
@@ -78,7 +88,6 @@ impl<const H: usize, const W: usize> PixelTable<H, W> {
     /// ## Example
     /// ```rust
     /// let mut table = PixelTable::<2>::default();
-    /// let mut table = PixelTable::<2>::default();
     /// for pix in table.iter_pixels_mut() {
     ///     // You can edit pixel here.
     ///     println!("{:?}", pix.position)
@@ -130,7 +139,7 @@ impl<const H: usize, const W: usize> std::ops::Deref for PixelTable<H, W> {
 
 impl<const H: usize, const W: usize> Default for PixelTable<H, W> {
     fn default() -> Self {
-        Self::new()
+        Self::new(PixelColor::default())
     }
 }
 

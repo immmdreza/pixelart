@@ -16,7 +16,7 @@ use super::PixelCanvasInterface;
 /// Styles use by [`PixelImageBuilder`].
 #[derive(Debug, Clone)]
 pub struct PixelImageStyle {
-    block_width: usize,
+    pixel_width: usize,
     separator_width: usize,
     background: Rgba<u8>,
     separator_color: Rgba<u8>,
@@ -30,21 +30,22 @@ impl Default for PixelImageStyle {
 
 impl PixelImageStyle {
     pub fn new(
-        block_width: usize,
+        pixel_width: usize,
         separator_width: usize,
         background: impl IntoPixelColor,
         separator_color: impl IntoPixelColor,
     ) -> Self {
         Self {
-            block_width,
+            pixel_width,
             separator_width,
             background: background.into_pixel_color().rgba(),
             separator_color: separator_color.into_pixel_color().rgba(),
         }
     }
 
+    /// Scales up each pixel and separator sizes on actual image.
     pub fn with_scale(mut self, scale: usize) -> PixelImageStyle {
-        self.block_width *= scale;
+        self.pixel_width *= scale;
         self.separator_width *= scale;
         self
     }
@@ -79,13 +80,13 @@ where
         let separator_pixel_length = self.style.separator_width;
 
         // How many pixels in height for blocks
-        let blocks_pixel_in_height = H * self.style.block_width;
+        let blocks_pixel_in_height = H * self.style.pixel_width;
         let separators_count_in_height = H + 1;
         // How many pixels in height for separator
         let separators_pixel_in_height = separators_count_in_height * separator_pixel_length;
         let height = blocks_pixel_in_height + separators_pixel_in_height;
 
-        let blocks_pixel_in_width = W * self.style.block_width;
+        let blocks_pixel_in_width = W * self.style.pixel_width;
         let separators_count_in_width = W + 1;
         let separators_pixel_in_width = separators_count_in_width * separator_pixel_length;
         let width = blocks_pixel_in_width + separators_pixel_in_width;
@@ -103,7 +104,7 @@ where
             draw_filled_rect_mut(
                 &mut image,
                 Rect::at(
-                    i * ((separator_pixel_length + self.style.block_width) as i32),
+                    i * ((separator_pixel_length + self.style.pixel_width) as i32),
                     0,
                 )
                 .of_size(separator_pixel_length as u32, height as u32),
@@ -116,7 +117,7 @@ where
                 &mut image,
                 Rect::at(
                     0,
-                    i * ((separator_pixel_length + self.style.block_width) as i32),
+                    i * ((separator_pixel_length + self.style.pixel_width) as i32),
                 )
                 .of_size(width as u32, separator_pixel_length as u32),
                 self.style.separator_color,
@@ -139,12 +140,12 @@ where
         // 2, 2 -> 3sp + 2bp, 3sp + 2bp
         // i, j -> (i + 1)sp + ibp, (j + 1)sp + jbp
         let start_x_pixel =
-            ((column + 1) * self.style.separator_width) + (column * self.style.block_width);
+            ((column + 1) * self.style.separator_width) + (column * self.style.pixel_width);
         let start_y_pixel =
-            ((row + 1) * self.style.separator_width) + (row * self.style.block_width);
+            ((row + 1) * self.style.separator_width) + (row * self.style.pixel_width);
 
-        for i in 0..self.style.block_width {
-            for j in 0..self.style.block_width {
+        for i in 0..self.style.pixel_width {
+            for j in 0..self.style.pixel_width {
                 image.draw_pixel(
                     (i + start_y_pixel) as u32,
                     (j + start_x_pixel) as u32,
@@ -163,8 +164,8 @@ where
                 self.draw_to_image_pixels(
                     image,
                     pixel.color.rgba(),
-                    pixel.position.row(),
                     pixel.position.column(),
+                    pixel.position.row(),
                 )
             }
         }
@@ -179,8 +180,11 @@ where
     }
 
     /// Saves the [`ImageBuffer`] to a file at specified path.
-    pub fn save(&self, path: &str) -> Result<(), image::ImageError> {
+    pub fn save<Q>(&self, path: Q) -> Result<(), image::ImageError>
+    where
+        Q: AsRef<Path>,
+    {
         let image = self.get_image();
-        image.save(Path::new(path))
+        image.save(path)
     }
 }

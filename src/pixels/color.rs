@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use image::{Rgb, Rgba};
 
 /// An interface for [`PixelColor`].
@@ -20,11 +22,24 @@ pub trait PixelColorInterface {
 /// Simple RGB color of a pixel.
 ///
 /// The default value is White (`u8::MAX` for all) and not Black (`u8::MIN` for all).
-#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct PixelColor {
     r: u8,
     g: u8,
     b: u8,
+}
+
+impl Display for PixelColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match (self.r, self.g, self.b) {
+            (0, 0, 0) => f.write_str("black"),
+            (255, 255, 255) => f.write_str("white"),
+            (255, 0, 0) => f.write_str("red"),
+            (0, 255, 0) => f.write_str("green"),
+            (0, 0, 255) => f.write_str("blue"),
+            (r, g, b) => write!(f, "({r}, {g}, {b})"),
+        }
+    }
 }
 
 impl PixelColorInterface for PixelColor {

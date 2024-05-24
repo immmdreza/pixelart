@@ -1,6 +1,8 @@
 //! Root module for anything related to [`Pixel`]s: color, position, table and etc.
 //!
 
+use std::fmt::Display;
+
 use self::{
     color::{IntoPixelColor, PixelColor},
     position::PixelPosition,
@@ -23,6 +25,12 @@ pub struct Pixel {
     color: PixelColor,
     /// Can't be changed.
     position: PixelPosition,
+}
+
+impl Display for Pixel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "pixel({}, {})", self.color, self.position)
+    }
 }
 
 impl PixelInterface for Pixel {

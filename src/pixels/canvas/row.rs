@@ -2,9 +2,9 @@
 //! [PixelTable](`super::table::PixelTable`)
 //!
 
-use std::array::{self};
+use std::{array, fmt::Display};
 
-use crate::pixels::{color::PixelColor, position::PixelPosition, Pixel};
+use crate::pixels::{color::IntoPixelColor, position::PixelPosition, Pixel};
 /// Represents a row of [`Pixel`]s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelRow<const W: usize> {
@@ -13,12 +13,23 @@ pub struct PixelRow<const W: usize> {
     pub(super) pixels: [Pixel; W],
 }
 
+impl<const W: usize> Display for PixelRow<W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[")?;
+        for pix in self.iter() {
+            write!(f, "{}, ", pix)?;
+        }
+        f.write_str("]")
+    }
+}
+
 impl<const W: usize> PixelRow<W> {
-    pub fn new(row: usize) -> Self {
+    pub fn new(row: usize, fill_color: impl IntoPixelColor) -> Self {
+        let color = fill_color.into_pixel_color();
         Self {
             row,
             pixels: array::from_fn(|column| {
-                Pixel::new(PixelColor::default(), PixelPosition::new(row, column))
+                Pixel::new(color.clone(), PixelPosition::new(row, column))
             }),
         }
     }
@@ -95,11 +106,13 @@ impl<'p, const W: usize, T> PixelRowIterMutExt<'p, W> for T where
 #[cfg(test)]
 mod tests {
 
+    use crate::pixels::color::PixelColor;
+
     use super::*;
 
     #[test]
     fn test_name() {
-        let mut r = PixelRow::<2>::new(0);
+        let mut r = PixelRow::<2>::new(0, PixelColor::default());
         let _s = r.as_mut_slice();
     }
 }
