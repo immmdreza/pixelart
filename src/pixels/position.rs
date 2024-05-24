@@ -255,7 +255,7 @@ where
 /// A set of common useful [`PixelStrictPosition`]s inside the container
 /// wrapped by square from `(H - 1, 0) -> bottom-left` to `(0, W - 1) -> top-right`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum CommonStrictPositions {
+pub enum StrictPositions {
     /// The most top left side of the container `(0, 0)`.
     TopLeft,
 
@@ -284,9 +284,9 @@ pub enum CommonStrictPositions {
     LeftCenter,
 }
 
-impl<const H: usize, const W: usize> PixelStrictPositionInterface<H, W> for CommonStrictPositions {
+impl<const H: usize, const W: usize> PixelStrictPositionInterface<H, W> for StrictPositions {
     fn row(&self) -> usize {
-        use CommonStrictPositions::*;
+        use StrictPositions::*;
         match self {
             TopLeft => 0,
             TopRight => 0,
@@ -301,7 +301,7 @@ impl<const H: usize, const W: usize> PixelStrictPositionInterface<H, W> for Comm
     }
 
     fn column(&self) -> usize {
-        use CommonStrictPositions::*;
+        use StrictPositions::*;
         match self {
             TopLeft => 0,
             TopRight => W - 1,

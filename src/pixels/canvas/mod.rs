@@ -2,6 +2,8 @@
 
 use self::{image::PixelImageBuilder, table::PixelTable};
 
+use super::color::{IntoPixelColor, PixelColor};
+
 pub mod image;
 pub mod row;
 pub mod table;
@@ -24,6 +26,20 @@ pub struct PixelCanvas<const H: usize, const W: usize = H> {
     table: PixelTable<H, W>,
 }
 
+impl<const H: usize, const W: usize> std::ops::Deref for PixelCanvas<H, W> {
+    type Target = PixelTable<H, W>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.table
+    }
+}
+
+impl<const H: usize, const W: usize> std::ops::DerefMut for PixelCanvas<H, W> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.table
+    }
+}
+
 impl<const H: usize, const W: usize> PixelCanvasInterface<H, W> for PixelCanvas<H, W> {
     fn table(&self) -> &PixelTable<H, W> {
         &self.table
@@ -36,6 +52,19 @@ impl<const H: usize, const W: usize> PixelCanvasInterface<H, W> for PixelCanvas<
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
 pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H, W> {
+    /// Updates every pixel's color to default which is white.
+    fn clear(&mut self) {
+        self.fill(PixelColor::default())
+    }
+
+    /// Fills all pixels color.
+    fn fill(&mut self, color: impl IntoPixelColor) {
+        let color = color.into_pixel_color();
+        self.table_mut().for_each_pixel_mut(|pixel| {
+            pixel.update_color(color.clone());
+        })
+    }
+
     fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self>
     where
         Self: Sized,
@@ -43,7 +72,7 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>: PixelCanvasInterface<H
         PixelImageBuilder::new(self, style)
     }
 
-    fn image_builder_default_style(&self) -> PixelImageBuilder<H, W, Self>
+    fn image_builder_default(&self) -> PixelImageBuilder<H, W, Self>
     where
         Self: Sized,
     {

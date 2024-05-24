@@ -4,13 +4,24 @@
 
 use std::array::{self};
 
-use crate::pixels::Pixel;
+use crate::pixels::{color::PixelColor, position::PixelPosition, Pixel};
 /// Represents a row of [`Pixel`]s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelRow<const W: usize> {
     /// Row number staring from 0. (row index)
     pub(super) row: usize,
     pub(super) pixels: [Pixel; W],
+}
+
+impl<const W: usize> PixelRow<W> {
+    pub fn new(row: usize) -> Self {
+        Self {
+            row,
+            pixels: array::from_fn(|column| {
+                Pixel::new(PixelColor::default(), PixelPosition::new(row, column))
+            }),
+        }
+    }
 }
 
 impl<const W: usize> std::ops::DerefMut for PixelRow<W> {
@@ -79,4 +90,16 @@ pub trait PixelRowIterMutExt<'p, const W: usize>: Iterator<Item = &'p mut PixelR
 impl<'p, const W: usize, T> PixelRowIterMutExt<'p, W> for T where
     T: Iterator<Item = &'p mut PixelRow<W>>
 {
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        let mut r = PixelRow::<2>::new(0);
+        let _s = r.as_mut_slice();
+    }
 }

@@ -5,9 +5,7 @@
 use std::array;
 
 use crate::pixels::{
-    position::{
-        PixelPosition, PixelPositionInterface, PixelStrictPosition, PixelStrictPositionInterface,
-    },
+    position::{PixelPosition, PixelPositionInterface, PixelStrictPositionInterface},
     Pixel,
 };
 
@@ -20,6 +18,12 @@ pub struct PixelTable<const H: usize, const W: usize = H> {
 }
 
 impl<const H: usize, const W: usize> PixelTable<H, W> {
+    pub fn new() -> Self {
+        Self {
+            pixels: array::from_fn(|row| PixelRow::new(row)),
+        }
+    }
+
     /// Get a pixel ref at a [`PixelPosition`] which can be out ob bound! In that case [`None`] is returned.
     ///
     /// Use indexing syntax and a [PixelStrictPosition](`crate::pixels::position::PixelStrictPosition`)
@@ -65,23 +69,39 @@ impl<const H: usize, const W: usize> PixelTable<H, W> {
     ///     println!("{:?}", pix.position)
     /// }
     /// ```
-    pub fn iter_pixels(&self) -> PixelsIter<H, W> {
-        PixelsIter::new(self)
+    pub fn iter_pixels(&self) -> impl Iterator<Item = &Pixel> {
+        self.iter().map(|f| f.iter()).flatten()
     }
 
     /// Use this type to iterate over mutable ref of the pixels.
     ///
-    /// Note that this is not an iterator and you should call `.advance()` to get next pixel.
     /// ## Example
     /// ```rust
     /// let mut table = PixelTable::<2>::default();
-    /// let mut iterator = table.iter_pixels_mut();
-    /// while let Some(pix) = iterator.advance() {
-    ///     println!("{:?}", pix.position);
+    /// let mut table = PixelTable::<2>::default();
+    /// for pix in table.iter_pixels_mut() {
+    ///     // You can edit pixel here.
+    ///     println!("{:?}", pix.position)
     /// }
     /// ```
-    pub fn iter_pixels_mut(&mut self) -> PixelsIterMut<H, W> {
-        PixelsIterMut::new(self)
+    pub fn iter_pixels_mut(&mut self) -> impl Iterator<Item = &mut Pixel> {
+        self.iter_mut().map(|f| f.iter_mut()).flatten()
+    }
+
+    /// Calls a closure on each read-only ref pixel of this table.
+    pub fn for_each_pixel<F>(&self, f: F)
+    where
+        F: Fn(&Pixel) + Copy,
+    {
+        self.iter().for_each(|row| row.iter().for_each(f))
+    }
+
+    /// Calls a closure on each mutable ref pixel of this table.
+    pub fn for_each_pixel_mut<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut Pixel) + Copy,
+    {
+        self.iter_mut().for_each(|row| row.iter_mut().for_each(f))
     }
 }
 
@@ -110,15 +130,7 @@ impl<const H: usize, const W: usize> std::ops::Deref for PixelTable<H, W> {
 
 impl<const H: usize, const W: usize> Default for PixelTable<H, W> {
     fn default() -> Self {
-        Self {
-            pixels: array::from_fn(|row| PixelRow {
-                row,
-                pixels: array::from_fn(|column| Pixel {
-                    color: Default::default(),
-                    position: PixelPosition::new(row, column),
-                }),
-            }),
-        }
+        Self::new()
     }
 }
 
@@ -153,70 +165,6 @@ impl<const H: usize, const W: usize, T: PixelStrictPositionInterface<H, W>> std:
     fn index_mut(&mut self, index: T) -> &mut Self::Output {
         let (row, column) = index.expand();
         &mut self[row][column]
-    }
-}
-
-pub struct PixelsIter<'t, const H: usize, const W: usize> {
-    table: &'t PixelTable<H, W>,
-    consumed: bool,
-    current_pos: PixelStrictPosition<H, W>,
-}
-
-impl<'t, const H: usize, const W: usize> PixelsIter<'t, H, W> {
-    pub fn new(table: &'t PixelTable<H, W>) -> Self {
-        Self {
-            table,
-            consumed: H == 0 || W == 0,
-            current_pos: PixelStrictPosition::new(0, 0).unwrap(),
-        }
-    }
-}
-
-impl<'t, const H: usize, const W: usize> Iterator for PixelsIter<'t, H, W> {
-    type Item = &'t Pixel;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.consumed {
-            return None;
-        }
-
-        let next_pixel = self
-            .table
-            .get(self.current_pos.row())?
-            .get(self.current_pos.column());
-        let next_pos = self.current_pos.next();
-        self.consumed = next_pos.is_none();
-        next_pixel
-    }
-}
-
-pub struct PixelsIterMut<'t, const H: usize, const W: usize> {
-    table: &'t mut PixelTable<H, W>,
-    consumed: bool,
-    current_pos: PixelStrictPosition<H, W>,
-}
-
-impl<'t, const H: usize, const W: usize> PixelsIterMut<'t, H, W> {
-    pub fn new(table: &'t mut PixelTable<H, W>) -> Self {
-        Self {
-            table,
-            consumed: H == 0 || W == 0,
-            current_pos: PixelStrictPosition::new(0, 0).unwrap(),
-        }
-    }
-
-    pub fn advance(&mut self) -> Option<&mut Pixel> {
-        if self.consumed {
-            return None;
-        }
-
-        let next_pixel = self
-            .table
-            .get_mut(self.current_pos.row())?
-            .get_mut(self.current_pos.column());
-        let next_pos = self.current_pos.next();
-        self.consumed = next_pos.is_none();
-        next_pixel
     }
 }
 
@@ -261,9 +209,8 @@ mod pixel_table_tests {
             println!("{:?}", pix.position)
         }
 
-        let mut iterator = table.iter_pixels_mut();
-        while let Some(pixel) = iterator.advance() {
-            println!("{:?}", pixel.position);
+        for pix in table.iter_pixels_mut() {
+            println!("{:?}", pix.position)
         }
     }
 }

@@ -1,7 +1,10 @@
 use std::path::Path;
 
 use image::{ImageBuffer, Rgba};
-use imageproc::{drawing::draw_filled_rect_mut, rect::Rect};
+use imageproc::{
+    drawing::{draw_filled_rect_mut, Canvas},
+    rect::Rect,
+};
 
 use crate::pixels::{
     color::{IntoPixelColor, PixelColor, PixelColorExt, PixelColorInterface},
@@ -10,6 +13,7 @@ use crate::pixels::{
 
 use super::PixelCanvasInterface;
 
+/// Styles use by [`PixelImageBuilder`].
 #[derive(Debug, Clone)]
 pub struct PixelImageStyle {
     block_width: usize,
@@ -39,13 +43,14 @@ impl PixelImageStyle {
         }
     }
 
-    // pub fn from_image_size<const H: usize, const W: usize>(height: u32, width: u32) {
-    //     let separator_size = 1;
-    //     let separators_in_height = H as u32 + 1;
-    //     let block_width = (height - (separators_in_height * separator_size)) / H as u32;
-    // }
+    pub fn with_scale(mut self, scale: usize) -> PixelImageStyle {
+        self.block_width *= scale;
+        self.separator_width *= scale;
+        self
+    }
 }
 
+/// A type which can help generating [`ImageBuffer`] from a [`PixelCanvasInterface`].
 pub struct PixelImageBuilder<'c, const H: usize, const W: usize, I>
 where
     I: PixelCanvasInterface<H, W>,
@@ -62,6 +67,7 @@ where
         Self { canvas_ref, style }
     }
 
+    /// Create a new instance of [`PixelImageBuilder`] with a default style.
     pub fn new_default_style(canvas_ref: &'c I) -> Self {
         Self {
             canvas_ref,
@@ -139,7 +145,7 @@ where
 
         for i in 0..self.style.block_width {
             for j in 0..self.style.block_width {
-                image.put_pixel(
+                image.draw_pixel(
                     (i + start_y_pixel) as u32,
                     (j + start_x_pixel) as u32,
                     color,
@@ -148,7 +154,8 @@ where
         }
     }
 
-    fn draw_pixels_table(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    /// Draws the associated [`PixelCanvasInterface`] to an image buffer.
+    pub fn draw_on_image(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
         let table = self.canvas_ref.table();
 
         for row in table.iter() {
@@ -163,15 +170,17 @@ where
         }
     }
 
-    pub(crate) fn get_image_buffer(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    /// Returns an [`ImageBuffer`] based on the current canvas attached.
+    pub fn get_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
         let mut image = self.get_pixel_paper_image();
-        self.draw_pixels_table(&mut image);
+        self.draw_on_image(&mut image);
 
         image
     }
 
+    /// Saves the [`ImageBuffer`] to a file at specified path.
     pub fn save(&self, path: &str) -> Result<(), image::ImageError> {
-        let image = self.get_image_buffer();
+        let image = self.get_image();
         image.save(Path::new(path))
     }
 }
