@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, path::Path};
+use std::path::Path;
 
 use image::{ImageBuffer, Rgba};
 use imageproc::{
@@ -9,7 +9,7 @@ use imageproc::{
 use crate::pixels::{
     color::{IntoPixelColor, PixelColor, PixelColorExt, PixelColorInterface},
     position::PixelPositionInterface,
-    PixelInterface,
+    Pixel, PixelInterface,
 };
 
 use super::PixelCanvasInterface;
@@ -53,25 +53,20 @@ impl PixelImageStyle {
 }
 
 /// A type which can help generating [`ImageBuffer`] from a [`PixelCanvasInterface`].
-pub struct PixelImageBuilder<'c, const H: usize, const W: usize, I, P: PixelInterface>
+pub struct PixelImageBuilder<'c, const H: usize, const W: usize, I>
 where
-    I: PixelCanvasInterface<H, W, P>,
+    I: PixelCanvasInterface<H, W, Pixel>,
 {
     canvas_ref: &'c I,
     style: PixelImageStyle,
-    _phantom: PhantomData<P>,
 }
 
-impl<'c, const H: usize, const W: usize, I, P: PixelInterface> PixelImageBuilder<'c, H, W, I, P>
+impl<'c, const H: usize, const W: usize, I> PixelImageBuilder<'c, H, W, I>
 where
-    I: PixelCanvasInterface<H, W, P>,
+    I: PixelCanvasInterface<H, W, Pixel>,
 {
     pub fn new(canvas_ref: &'c I, style: PixelImageStyle) -> Self {
-        Self {
-            canvas_ref,
-            style,
-            _phantom: PhantomData,
-        }
+        Self { canvas_ref, style }
     }
 
     /// Create a new instance of [`PixelImageBuilder`] with a default style.
@@ -79,7 +74,13 @@ where
         Self {
             canvas_ref,
             style: Default::default(),
-            _phantom: PhantomData,
+        }
+    }
+
+    pub fn with_scale(self, scale: usize) -> Self {
+        Self {
+            style: self.style.with_scale(scale),
+            ..self
         }
     }
 

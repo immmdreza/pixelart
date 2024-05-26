@@ -5,9 +5,10 @@ use self::{image::PixelImageBuilder, table::PixelTable};
 use super::{
     color::{IntoPixelColor, PixelColor},
     position::{IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle},
-    Pixel, PixelInterface, PixelMutInterface,
+    Pixel, PixelInitializer, PixelInterface, PixelMutInterface,
 };
 
+pub mod drawable;
 pub mod image;
 pub mod row;
 pub mod table;
@@ -38,8 +39,8 @@ impl<const H: usize, const W: usize> Default for PixelCanvas<H, W, Pixel> {
     }
 }
 
-impl<const H: usize, const W: usize> PixelCanvas<H, W, Pixel> {
-    pub fn new(fill_color: impl IntoPixelColor + Clone) -> Self {
+impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> PixelCanvas<H, W, P> {
+    pub fn new(fill_color: impl Into<P::ColorType> + Clone) -> Self {
         Self {
             table: PixelTable::new(fill_color),
         }
@@ -86,12 +87,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvasInterface<H, 
     }
 }
 
-fn _fill_inside<
-    const H: usize,
-    const W: usize,
-    P: PixelMutInterface,
-    I: PixelCanvasExt<H, W, P>,
->(
+fn _fill_inside<const H: usize, const W: usize, I: PixelCanvasExt<H, W>>(
     canvas: &mut I,
     base_color: Option<PixelColor>,
     color: impl IntoPixelColor,
@@ -114,17 +110,19 @@ fn _fill_inside<
 }
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
-pub trait PixelCanvasExt<const H: usize, const W: usize, P: PixelInterface>:
-    PixelCanvasInterface<H, W, P>
+///
+/// This trait is only implemented for canvas of [`Pixel`] type.
+pub trait PixelCanvasExt<const H: usize, const W: usize>:
+    PixelCanvasInterface<H, W, Pixel>
 {
-    fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self, P>
+    fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self>
     where
         Self: Sized,
     {
         PixelImageBuilder::new(self, style)
     }
 
-    fn image_builder_default(&self) -> PixelImageBuilder<H, W, Self, P>
+    fn image_builder_default(&self) -> PixelImageBuilder<H, W, Self>
     where
         Self: Sized,
     {
@@ -132,22 +130,19 @@ pub trait PixelCanvasExt<const H: usize, const W: usize, P: PixelInterface>:
     }
 
     /// Gets the color of a pixel at given position.
-    fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &PixelColor
-    where
-        P: 'a,
-    {
+    fn color_at(&self, pos: impl PixelStrictPositionInterface<H, W>) -> &PixelColor {
         self.table()[pos].color()
     }
 }
 
-impl<const H: usize, const W: usize, T, P: PixelInterface> PixelCanvasExt<H, W, P> for T where
-    T: PixelCanvasInterface<H, W, P>
+impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
+    T: PixelCanvasInterface<H, W, Pixel>
 {
 }
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
-pub trait PixelCanvasMutExt<const H: usize, const W: usize, P: PixelMutInterface>:
-    PixelCanvasInterface<H, W, P>
+pub trait PixelCanvasMutExt<const H: usize, const W: usize>:
+    PixelCanvasInterface<H, W, Pixel>
 {
     /// Updates every pixel's color to default which is white.
     fn clear(&mut self) {
@@ -166,7 +161,7 @@ pub trait PixelCanvasMutExt<const H: usize, const W: usize, P: PixelMutInterface
     fn update_color_at(
         &mut self,
         pos: impl PixelStrictPositionInterface<H, W>,
-        color: impl IntoPixelColor,
+        color: impl Into<PixelColor>,
     ) -> PixelColor {
         self.table_mut()[pos].update_color(color)
     }
@@ -179,12 +174,12 @@ pub trait PixelCanvasMutExt<const H: usize, const W: usize, P: PixelMutInterface
     ) where
         Self: Sized,
     {
-        _fill_inside::<H, W, P, _>(self, None, color, point_inside)
+        _fill_inside::<H, W, _>(self, None, color, point_inside)
     }
 }
 
-impl<const H: usize, const W: usize, T, P: PixelMutInterface> PixelCanvasMutExt<H, W, P> for T where
-    T: PixelCanvasInterface<H, W, P>
+impl<const H: usize, const W: usize, T> PixelCanvasMutExt<H, W> for T where
+    T: PixelCanvasInterface<H, W, Pixel>
 {
 }
 

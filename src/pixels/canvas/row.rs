@@ -4,7 +4,7 @@
 
 use std::{array, fmt::Display};
 
-use crate::pixels::{color::IntoPixelColor, position::PixelPosition, Pixel, PixelInterface};
+use crate::pixels::{position::PixelPosition, PixelInitializer, PixelInterface};
 /// Represents a row of [`Pixel`]s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelRow<const W: usize, P: PixelInterface> {
@@ -23,13 +23,12 @@ impl<const W: usize, P: PixelInterface + Display> Display for PixelRow<W, P> {
     }
 }
 
-impl<const W: usize> PixelRow<W, Pixel> {
-    pub fn new(row: usize, fill_color: impl IntoPixelColor) -> Self {
-        let color = fill_color.into_pixel_color();
+impl<const W: usize, P: PixelInitializer + PixelInterface> PixelRow<W, P> {
+    pub fn new(row: usize, fill_color: impl Into<P::ColorType> + Clone) -> Self {
         Self {
             row,
-            pixels: array::from_fn(|column| {
-                Pixel::new(color.clone(), PixelPosition::new(row, column))
+            pixels: array::from_fn(move |column| {
+                P::new(fill_color.clone(), PixelPosition::new(row, column))
             }),
         }
     }
@@ -113,7 +112,7 @@ impl<'p, const W: usize, T, P: PixelInterface + 'static> PixelRowIterMutExt<'p, 
 #[cfg(test)]
 mod tests {
 
-    use crate::pixels::color::PixelColor;
+    use crate::pixels::{color::PixelColor, Pixel};
 
     use super::*;
 

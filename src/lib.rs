@@ -20,7 +20,7 @@ mod tests {
         assert_eq!(canvas[pos].color(), &PixelColor::WHITE);
 
         // Update color of a pixel.
-        let prev_color: PixelColor = canvas[pos].update_color(PixelColor::BLACK);
+        let prev_color = canvas[pos].update_color(PixelColor::BLACK);
         assert_eq!(prev_color, PixelColor::WHITE);
         assert_eq!(canvas[pos].color(), &PixelColor::BLACK);
 

@@ -5,9 +5,9 @@
 use std::{array, fmt::Display};
 
 use crate::pixels::{
-    color::{IntoPixelColor, PixelColor},
+    color::PixelColor,
     position::{PixelPosition, PixelPositionInterface, PixelStrictPositionInterface},
-    Pixel, PixelInterface,
+    Pixel, PixelInitializer, PixelInterface,
 };
 
 use super::row::PixelRow;
@@ -27,8 +27,8 @@ impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for Pi
     }
 }
 
-impl<const H: usize, const W: usize> PixelTable<H, W, Pixel> {
-    pub fn new(fill_color: impl IntoPixelColor + Clone) -> Self {
+impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> PixelTable<H, W, P> {
+    pub fn new(fill_color: impl Into<P::ColorType> + Clone) -> Self {
         Self {
             pixels: array::from_fn(|row| PixelRow::new(row, fill_color.clone())),
         }
