@@ -119,12 +119,21 @@ pub trait IntoPixelColor {
     fn into_pixel_color(self) -> PixelColor;
 }
 
+// impl<T> IntoPixelColor for T
+// where
+//     T: PixelColorInterface,
+// {
+//     fn into_pixel_color(self) -> PixelColor {
+//         self.pixel_color()
+//     }
+// }
+
 impl<T> IntoPixelColor for T
 where
-    T: PixelColorInterface,
+    T: Into<PixelColor>,
 {
     fn into_pixel_color(self) -> PixelColor {
-        self.pixel_color()
+        self.into()
     }
 }
 

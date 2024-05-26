@@ -1,7 +1,10 @@
 use crate::pixels::{
     color::PixelColor,
-    maybe::{MaybePixel, PixelCanvasExt},
-    position::{IntoPixelStrictPosition, PixelPositionInterface, PixelStrictPositionInterface},
+    maybe::{MaybePixel, MaybePixelCanvasExt},
+    position::{
+        IntoPixelStrictPosition, PixelPositionInterface, PixelStrictPositionInterface,
+        StrictPositions,
+    },
     PixelInterface, PixelMutInterface,
 };
 
@@ -12,7 +15,7 @@ pub trait Drawable<const H: usize, const W: usize> {
     /// Draws the drawable on the canvas.
     ///
     /// The `H` and `W` on canvas and drawable dose'nt have to be the same though they can.
-    fn draw_on_canvas<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
@@ -20,10 +23,30 @@ pub trait Drawable<const H: usize, const W: usize> {
         P: PixelMutInterface,
         C: PixelCanvasInterface<HC, WC, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>;
+
+    /// As same as [`draw_on`] but the `H` and `W` on canvas and drawable are same
+    fn draw_on_exact<P, C>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
+    where
+        P: PixelMutInterface,
+        C: PixelCanvasInterface<H, W, P>,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        self.draw_on::<H, W, P, C>(start_pos, canvas)
+    }
+
+    /// As same as [`draw_on_exact`] but the start point is TopLeft (0, 0).
+    fn draw_on_exact_abs<P, C>(&self, canvas: &mut C)
+    where
+        P: PixelMutInterface,
+        C: PixelCanvasInterface<H, W, P>,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        self.draw_on_exact::<P, C>(StrictPositions::TopLeft, canvas)
+    }
 }
 
 impl<const H: usize, const W: usize> Drawable<H, W> for PixelCanvas<H, W, MaybePixel> {
-    fn draw_on_canvas<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
@@ -47,7 +70,7 @@ impl<const H: usize, const W: usize> Drawable<H, W> for PixelCanvas<H, W, MaybeP
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::{PixelCanvasExt, PixelCanvasMutExt},
+        canvas::{PixelCanvasExt, SharedMutPixelCanvasExt},
         color::{PixelColor, PixelColorExt},
         position::{PixelStrictPosition, StrictPositions},
         PixelIterExt, PixelIterMutExt,
@@ -60,7 +83,7 @@ mod tests {
         let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
         let mut my_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::new(None);
 
-        my_5x5_diagonal_line_template.draw_on_canvas(StrictPositions::TopLeft, &mut canvas);
+        my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
         assert!(
             canvas
                 .iter_pixels()
@@ -73,7 +96,7 @@ mod tests {
             .filter_position(|p| p.column() == p.row())
             .update_colors(PixelColor::BLACK);
 
-        my_5x5_diagonal_line_template.draw_on_canvas(StrictPositions::TopLeft, &mut canvas);
+        my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
 
         assert!(canvas
             .iter_pixels()
@@ -85,8 +108,7 @@ mod tests {
             .all(|pix| pix.color() == &PixelColor::BLACK));
 
         canvas.clear();
-        my_5x5_diagonal_line_template
-            .draw_on_canvas(PixelStrictPosition::new(0, 2).unwrap(), &mut canvas);
+        my_5x5_diagonal_line_template.draw_on(PixelStrictPosition::new(0, 2).unwrap(), &mut canvas);
 
         assert_eq!(
             canvas.iter_pixels().filter_color(PixelColor::BLACK).count(),
@@ -112,10 +134,10 @@ mod tests {
             .update_colors(PixelColor::BLUE);
 
         my_other_5x5_diagonal_line_template
-            .draw_on_canvas(StrictPositions::TopLeft, &mut my_5x5_diagonal_line_template);
+            .draw_on(StrictPositions::TopLeft, &mut my_5x5_diagonal_line_template);
 
         let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
-        my_5x5_diagonal_line_template.draw_on_canvas(StrictPositions::TopLeft, &mut canvas);
+        my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
 
         assert_eq!(
             canvas.iter_pixels().filter_color(PixelColor::RED).count(),

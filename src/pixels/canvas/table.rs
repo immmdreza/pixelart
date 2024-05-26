@@ -5,7 +5,6 @@
 use std::{array, fmt::Display};
 
 use crate::pixels::{
-    color::PixelColor,
     position::{PixelPosition, PixelPositionInterface, PixelStrictPositionInterface},
     Pixel, PixelInitializer, PixelInterface,
 };
@@ -139,9 +138,13 @@ impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Deref for Pixe
     }
 }
 
-impl<const H: usize, const W: usize> Default for PixelTable<H, W, Pixel> {
+impl<const H: usize, const W: usize, P> Default for PixelTable<H, W, P>
+where
+    P: PixelInterface + PixelInitializer,
+    P::ColorType: Default + Clone,
+{
     fn default() -> Self {
-        Self::new(PixelColor::default())
+        Self::new(P::ColorType::default())
     }
 }
 

@@ -1,6 +1,8 @@
 use super::{
-    canvas::PixelCanvasInterface, color::PixelColor, position::PixelPosition, PixelInitializer,
-    PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
+    canvas::{PixelCanvasInterface, SharedMutPixelCanvasExt, SharedPixelCanvasExt},
+    color::PixelColor,
+    position::{PixelPosition, PixelStrictPositionInterface},
+    PixelInitializer, PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
 };
 
 /// A pixel that may not have any effect on the color at this position.
@@ -92,15 +94,31 @@ impl<'p, T> PixelIterMutExt<'p, &'p mut MaybePixel> for T where
 /// Extensions for any type that implements [`PixelCanvasInterface`].
 ///
 /// This trait is only implemented for canvas of [`MaybePixel`] type.
-pub trait PixelCanvasExt<const H: usize, const W: usize>:
-    PixelCanvasInterface<H, W, MaybePixel>
+pub trait MaybePixelCanvasExt<const H: usize, const W: usize>:
+    SharedPixelCanvasExt<H, W, MaybePixel>
 {
     fn iter_existing_pixels(&self) -> impl Iterator<Item = &MaybePixel> {
         self.table().iter_pixels().filter(|p| p.has_color())
     }
 }
 
-impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
+impl<const H: usize, const W: usize, T> MaybePixelCanvasExt<H, W> for T where
+    T: PixelCanvasInterface<H, W, MaybePixel>
+{
+}
+
+/// Extensions for any type that implements [`PixelCanvasInterface`].
+///
+/// This trait is only implemented for canvas of [`MaybePixel`] type.
+pub trait MaybePixelMutCanvasExt<const H: usize, const W: usize>:
+    SharedMutPixelCanvasExt<H, W, MaybePixel>
+{
+    fn clear_pixel(&mut self, pos: impl PixelStrictPositionInterface<H, W>) -> Option<PixelColor> {
+        self.update_color_at(pos, Option::None)
+    }
+}
+
+impl<const H: usize, const W: usize, T> MaybePixelMutCanvasExt<H, W> for T where
     T: PixelCanvasInterface<H, W, MaybePixel>
 {
 }

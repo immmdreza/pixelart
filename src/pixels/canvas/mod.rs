@@ -1,6 +1,6 @@
 //! Module contains types related to a [`PixelCanvas`].
 
-use self::{image::PixelImageBuilder, table::PixelTable};
+use self::{drawable::Drawable, image::PixelImageBuilder, table::PixelTable};
 
 use super::{
     color::{IntoPixelColor, PixelColor},
@@ -12,6 +12,7 @@ pub mod drawable;
 pub mod image;
 pub mod row;
 pub mod table;
+pub mod templates;
 
 /// Interface that any pixel canvas may want to implement.
 ///
@@ -31,7 +32,11 @@ pub struct PixelCanvas<const H: usize, const W: usize = H, P: PixelInterface = P
     table: PixelTable<H, W, P>,
 }
 
-impl<const H: usize, const W: usize> Default for PixelCanvas<H, W, Pixel> {
+impl<const H: usize, const W: usize, P> Default for PixelCanvas<H, W, P>
+where
+    P: PixelInterface + PixelInitializer,
+    <P as PixelInterface>::ColorType: Default + Clone,
+{
     fn default() -> Self {
         Self {
             table: Default::default(),
@@ -111,9 +116,99 @@ fn _fill_inside<const H: usize, const W: usize, I: PixelCanvasExt<H, W>>(
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
 ///
+/// This trait is implemented for any canvas of [`PixelInterface`].
+pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface>:
+    PixelCanvasInterface<H, W, P>
+{
+    /// Gets the color of a pixel at given position.
+    fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &P::ColorType
+    where
+        P: 'a,
+    {
+        self.table()[pos].color()
+    }
+}
+
+impl<const H: usize, const W: usize, T, P: PixelInterface> SharedPixelCanvasExt<H, W, P> for T where
+    T: PixelCanvasInterface<H, W, P>
+{
+}
+
+/// Extensions for any type that implements [`PixelCanvasInterface`].
+///
+/// This trait is implemented for any canvas of [`PixelInterface`].
+pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInterface>:
+    PixelCanvasInterface<H, W, P>
+{
+    /// Updates every pixel's color to default which is white.
+    fn clear(&mut self)
+    where
+        <P as PixelInterface>::ColorType: Default + Clone,
+    {
+        self.fill(P::ColorType::default())
+    }
+
+    /// Fills all pixels color.
+    fn fill(&mut self, color: impl Into<P::ColorType>)
+    where
+        <P as PixelInterface>::ColorType: Clone,
+    {
+        let color = color.into();
+        self.table_mut().for_each_pixel_mut(|pixel| {
+            pixel.update_color(color.clone());
+        })
+    }
+
+    /// Update color of a pixel at the given position.
+    fn update_color_at(
+        &mut self,
+        pos: impl PixelStrictPositionInterface<H, W>,
+        color: impl Into<P::ColorType>,
+    ) -> P::ColorType {
+        self.table_mut()[pos].update_color(color)
+    }
+
+    fn draw<const HD: usize, const WD: usize>(
+        &mut self,
+        start_pos: impl IntoPixelStrictPosition<H, W>,
+        drawable: impl Drawable<HD, WD>,
+    ) where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        drawable.draw_on(start_pos, self)
+    }
+
+    fn draw_exact(
+        &mut self,
+        start_pos: impl IntoPixelStrictPosition<H, W>,
+        drawable: impl Drawable<H, W>,
+    ) where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        drawable.draw_on_exact(start_pos, self)
+    }
+
+    fn draw_exact_abs(&mut self, drawable: impl Drawable<H, W>)
+    where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        drawable.draw_on_exact_abs(self)
+    }
+}
+
+impl<const H: usize, const W: usize, T, P: PixelMutInterface> SharedMutPixelCanvasExt<H, W, P> for T where
+    T: PixelCanvasInterface<H, W, P>
+{
+}
+
+/// Extensions for any type that implements [`PixelCanvasInterface`].
+///
 /// This trait is only implemented for canvas of [`Pixel`] type.
 pub trait PixelCanvasExt<const H: usize, const W: usize>:
-    PixelCanvasInterface<H, W, Pixel>
+    SharedPixelCanvasExt<H, W, Pixel>
 {
     fn image_builder(&self, style: image::PixelImageStyle) -> PixelImageBuilder<H, W, Self>
     where
@@ -128,11 +223,6 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>:
     {
         PixelImageBuilder::new_default_style(self)
     }
-
-    /// Gets the color of a pixel at given position.
-    fn color_at(&self, pos: impl PixelStrictPositionInterface<H, W>) -> &PixelColor {
-        self.table()[pos].color()
-    }
 }
 
 impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
@@ -142,30 +232,8 @@ impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
 pub trait PixelCanvasMutExt<const H: usize, const W: usize>:
-    PixelCanvasInterface<H, W, Pixel>
+    SharedMutPixelCanvasExt<H, W, Pixel>
 {
-    /// Updates every pixel's color to default which is white.
-    fn clear(&mut self) {
-        self.fill(PixelColor::default())
-    }
-
-    /// Fills all pixels color.
-    fn fill(&mut self, color: impl IntoPixelColor) {
-        let color = color.into_pixel_color();
-        self.table_mut().for_each_pixel_mut(|pixel| {
-            pixel.update_color(color.clone());
-        })
-    }
-
-    /// Update color of a pixel at the given position.
-    fn update_color_at(
-        &mut self,
-        pos: impl PixelStrictPositionInterface<H, W>,
-        color: impl Into<PixelColor>,
-    ) -> PixelColor {
-        self.table_mut()[pos].update_color(color)
-    }
-
     /// Keep filling pixels with new color until we encounter a new color.
     fn fill_inside(
         &mut self,
