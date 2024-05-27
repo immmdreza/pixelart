@@ -7,6 +7,8 @@ Code to pixel image! This is what this library dose at the moment.
 The very first-stone purpose of this lib is to somehow visualize what your code
 dose for maybe learning and understating purposes, and of course having fun!
 
+As I already used a lot in tests, If the generated pixel image seems right, you can confirm that your code is also working right. That's one of the _"learning and understating purposes"_, I mentioned before.
+
 We map a simple **fixed size** 2D array of pixels to pixels on a real image. So you
 can generate image and see how it changes based on what you do with that array.
 
