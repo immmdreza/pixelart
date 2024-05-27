@@ -1,5 +1,9 @@
 pub use crate::pixels::{
-    canvas::{PixelCanvas, PixelCanvasExt},
+    canvas::{
+        drawable::Drawable, PixelCanvas, PixelCanvasExt, PixelCanvasMutExt, SharedMutPixelCanvasExt,
+    },
     color::{PixelColor, PixelColorExt},
-    position::StrictPositions,
+    maybe::MaybePixel,
+    position::{PixelPositionInterface, StrictPositions},
+    Pixel, PixelIterExt, PixelIterMutExt,
 };

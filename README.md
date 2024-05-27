@@ -94,9 +94,11 @@ You can do many other things like iterating over rows and pixels, creating templ
 
 The library aims to provide more method and type to make your life easier, some of these functionalities are:
 
-1. Using `MaybePixel` instead of `Pixel` in canvas allows us to [Create Templates](src/pixels/canvas/drawable.rs#L108-L179).
+1. Using `MaybePixel` instead of `Pixel` in canvas allows us to [Create Templates](examples/src/template.rs).
 
-2. Using [Pen](src/pixels/canvas/pen.rs#L247-L289) to play fun.
+2. In above examples you can review usage of rust iterables and extension methods.
+
+3. Using [Pen](examples/src/pen.rs) to have fun.
 
 ## Where?
 
