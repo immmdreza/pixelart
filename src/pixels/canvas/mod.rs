@@ -2,15 +2,18 @@
 
 use crate::image::{PixelImageBuilder, PixelImageStyle};
 
-use self::{drawable::Drawable, table::PixelTable};
+use self::{drawable::Drawable, pen::Pen, table::PixelTable};
 
 use super::{
     color::{IntoPixelColor, PixelColor},
-    position::{IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle},
+    position::{
+        IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle, MAIN_DIRECTIONS,
+    },
     Pixel, PixelInitializer, PixelInterface, PixelMutInterface,
 };
 
 pub mod drawable;
+pub mod pen;
 pub mod row;
 pub mod table;
 pub mod templates;
@@ -126,7 +129,9 @@ fn _fill_inside<const H: usize, const W: usize, I: PixelCanvasMutExt<H, W>>(
 
     canvas.update_color_at(&pos, new_color);
 
-    for dir in SingleCycle::new(super::position::Direction::Up) {
+    for dir in
+        SingleCycle::new(super::position::Direction::Up).filter(|dir| MAIN_DIRECTIONS.contains(dir))
+    {
         if let Ok(new_pos) = pos.checked_direction(dir, 1) {
             if canvas.color_at(&new_pos) == &base_color {
                 canvas.update_color_at(&new_pos, new_color);
@@ -218,6 +223,19 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         <P as PixelInterface>::ColorType: From<PixelColor>,
     {
         drawable.draw_on_exact_abs(self)
+    }
+
+    fn attach_new_pen(
+        &mut self,
+        color: impl Into<P::ColorType>,
+        start_pos: impl IntoPixelStrictPosition<H, W>,
+    ) -> Pen<pen::CanvasAttachedMarker<H, W, P, Self>>
+    where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        let pen = Pen::new(color);
+        pen.attach(self, start_pos)
     }
 }
 

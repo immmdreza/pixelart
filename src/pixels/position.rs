@@ -2,6 +2,20 @@ use std::fmt::Display;
 
 use thiserror::Error;
 
+pub const MAIN_DIRECTIONS: [Direction; 4] = [
+    Direction::Up,
+    Direction::Right,
+    Direction::Down,
+    Direction::Left,
+];
+
+pub const MINOR_DIRECTIONS: [Direction; 4] = [
+    Direction::UpRight,
+    Direction::DownRight,
+    Direction::DownLeft,
+    Direction::UpLeft,
+];
+
 /// Interface for a pixel position.
 pub trait PixelPositionInterface {
     /// Row number of the position starting from 0.
@@ -55,6 +69,10 @@ pub trait PixelPositionInterface {
             Direction::Right => self.right(amount),
             Direction::Down => self.down(amount),
             Direction::Left => self.left(amount),
+            Direction::UpRight => self.up(amount).right(amount),
+            Direction::DownRight => self.down(amount).right(amount),
+            Direction::DownLeft => self.down(amount).left(amount),
+            Direction::UpLeft => self.up(amount).left(amount),
         }
     }
 }
@@ -135,7 +153,7 @@ pub trait PixelStrictPositionInterface<const H: usize, const W: usize> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct PixelPosition {
     row: usize,
     column: usize,
@@ -361,14 +379,24 @@ pub enum Direction {
     /// Going up.
     Up,
 
+    /// Up right.
+    UpRight,
+
     /// Going right.
     Right,
+
+    /// Right down
+    DownRight,
 
     /// Going down.
     Down,
 
+    DownLeft,
+
     /// Going left.
     Left,
+
+    UpLeft,
 }
 
 impl Iterator for Direction {
@@ -377,10 +405,14 @@ impl Iterator for Direction {
     fn next(&mut self) -> Option<Self::Item> {
         use Direction::*;
         match self {
-            Up => Right,
-            Right => Down,
-            Down => Left,
-            Left => Up,
+            Up => UpRight,
+            UpRight => Right,
+            Right => DownRight,
+            DownRight => Down,
+            Down => DownLeft,
+            DownLeft => Left,
+            Left => UpLeft,
+            UpLeft => Up,
         }
         .into()
     }

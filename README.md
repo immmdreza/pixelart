@@ -1,4 +1,4 @@
-# (What is) PixelArt 👾?
+# (What is) PixelArt👾?
 
 Code to pixel image! This is what this library dose at the moment.
 
@@ -40,7 +40,7 @@ pub fn main() {
 
 This will be the result.
 
-![alt text](arts/my_first_art.png)
+![Your first art](arts/my_first_art.png)
 
 ### Breakdown
 
@@ -70,7 +70,7 @@ Let's break down and see what happened though it must be clear enough.
 
     The result will be
 
-    ![alt text](arts/my_mini_first_art.png)
+    ![Your mini first art](arts/my_mini_first_art.png)
 
 2. Accessing the pixel at the center.
 
@@ -89,6 +89,14 @@ Let's break down and see what happened though it must be clear enough.
    And jesus please save me as png (With respect).
 
 You can do many other things like iterating over rows and pixels, creating templates and more ...
+
+### More?
+
+The library aims to provide more method and type to make your life easier, some of these functionalities are:
+
+1. Using `MaybePixel` instead of `Pixel` in canvas allows us to [Create Templates](src/pixels/canvas/drawable.rs#L108-L179).
+
+2. Using [Pen](src/pixels/canvas/pen.rs#L247-L289) to play fun.
 
 ## Where?
 

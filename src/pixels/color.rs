@@ -102,6 +102,18 @@ impl PixelColor {
         Self { r: 0, g: 0, b }
     }
 
+    pub const fn red(self, r: u8) -> Self {
+        Self { r, ..self }
+    }
+
+    pub const fn green(self, g: u8) -> Self {
+        Self { g, ..self }
+    }
+
+    pub const fn blue(self, b: u8) -> Self {
+        Self { b, ..self }
+    }
+
     pub fn r(&self) -> u8 {
         self.r
     }
@@ -174,6 +186,15 @@ pub trait PixelColorExt: PixelColorInterface {
 
     /// Color **Blue**.
     const BLUE: PixelColor = PixelColor::from_blue(u8::MAX);
+
+    /// Color **Yellow**.
+    const YELLOW: PixelColor = PixelColor::from_red(u8::MAX).green(u8::MAX);
+
+    /// Color **Cyan**.
+    const CYAN: PixelColor = PixelColor::from_green(u8::MAX).blue(u8::MAX);
+
+    /// Color **Magenta**.
+    const MAGENTA: PixelColor = PixelColor::from_red(u8::MAX).blue(u8::MAX);
 
     /// Get [`PixelColor`] struct from a type that implements [`PixelColorInterface`].
     fn pixel_color(&self) -> PixelColor {
