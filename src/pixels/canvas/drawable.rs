@@ -8,7 +8,7 @@ use crate::pixels::{
     PixelInterface, PixelMutInterface,
 };
 
-use super::{PixelCanvas, PixelCanvasInterface};
+use super::{PixelCanvas, PixelCanvasMutInterface};
 
 /// Something that can later be drawn on a [`PixelCanvas`].
 pub trait Drawable<const H: usize, const W: usize> {
@@ -21,14 +21,14 @@ pub trait Drawable<const H: usize, const W: usize> {
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
-        C: PixelCanvasInterface<HC, WC, P>,
+        C: PixelCanvasMutInterface<HC, WC, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>;
 
     /// As same as [`draw_on`] but the `H` and `W` on canvas and drawable are same
     fn draw_on_exact<P, C>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
     where
         P: PixelMutInterface,
-        C: PixelCanvasInterface<H, W, P>,
+        C: PixelCanvasMutInterface<H, W, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>,
     {
         self.draw_on::<H, W, P, C>(start_pos, canvas)
@@ -38,10 +38,30 @@ pub trait Drawable<const H: usize, const W: usize> {
     fn draw_on_exact_abs<P, C>(&self, canvas: &mut C)
     where
         P: PixelMutInterface,
-        C: PixelCanvasInterface<H, W, P>,
+        C: PixelCanvasMutInterface<H, W, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>,
     {
         self.draw_on_exact::<P, C>(StrictPositions::TopLeft, canvas)
+    }
+}
+
+fn draw_maybe_canvas_on<const H: usize, const W: usize, const HC: usize, const WC: usize, P, C>(
+    me: &PixelCanvas<H, W, MaybePixel>,
+    start_pos: impl IntoPixelStrictPosition<HC, WC>,
+    canvas: &mut C,
+) where
+    P: PixelMutInterface,
+    C: PixelCanvasMutInterface<HC, WC, P>,
+    <P as PixelInterface>::ColorType: From<PixelColor>,
+{
+    let start_pos = start_pos.into_pixel_strict_position();
+    for pixel in me.iter_existing_pixels() {
+        if let Ok(Ok(pos_on_canvas)) = start_pos
+            .checked_down(pixel.position().row())
+            .map(|res| res.checked_right(pixel.position().column()))
+        {
+            canvas.table_mut()[pos_on_canvas].update_color(pixel.color().unwrap());
+        }
     }
 }
 
@@ -52,18 +72,24 @@ impl<const H: usize, const W: usize> Drawable<H, W> for PixelCanvas<H, W, MaybeP
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
-        C: PixelCanvasInterface<HC, WC, P>,
+        C: PixelCanvasMutInterface<HC, WC, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>,
     {
-        let start_pos = start_pos.into_pixel_strict_position();
-        for pixel in self.iter_existing_pixels() {
-            if let Ok(Ok(pos_on_canvas)) = start_pos
-                .checked_down(pixel.position().row())
-                .map(|res| res.checked_right(pixel.position().column()))
-            {
-                canvas.table_mut()[pos_on_canvas].update_color(pixel.color().unwrap());
-            }
-        }
+        draw_maybe_canvas_on(self, start_pos, canvas)
+    }
+}
+
+impl<const H: usize, const W: usize> Drawable<H, W> for &PixelCanvas<H, W, MaybePixel> {
+    fn draw_on<const HC: usize, const WC: usize, P, C>(
+        &self,
+        start_pos: impl IntoPixelStrictPosition<HC, WC>,
+        canvas: &mut C,
+    ) where
+        P: PixelMutInterface,
+        C: PixelCanvasMutInterface<HC, WC, P>,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        draw_maybe_canvas_on(self, start_pos, canvas)
     }
 }
 
@@ -115,7 +141,7 @@ mod tests {
             3
         );
 
-        let image = canvas.image_builder_default().with_scale(5);
+        let image = canvas.default_image_builder().with_scale(5);
         image.save("arts/drawing_0.png").unwrap();
     }
 
@@ -148,7 +174,7 @@ mod tests {
             5
         );
 
-        let image = canvas.image_builder_default().with_scale(5);
+        let image = canvas.default_image_builder().with_scale(5);
         image.save("arts/drawing_1.png").unwrap();
     }
 }

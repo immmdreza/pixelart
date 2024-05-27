@@ -36,7 +36,8 @@ pub trait PixelMutInterface: PixelInterface {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pixel {
-    color: PixelColor,
+    pub color: PixelColor,
+
     /// Can't be changed.
     position: PixelPosition,
 }

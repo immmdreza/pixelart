@@ -1,9 +1,11 @@
+pub mod image;
 pub mod pixels;
+pub mod prelude;
 
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::{image::PixelImageStyle, PixelCanvas, PixelCanvasExt},
+        canvas::{PixelCanvas, PixelCanvasExt},
         color::{PixelColor, PixelColorExt},
         position::{PixelPositionInterface, StrictPositions},
         PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
@@ -42,7 +44,7 @@ mod tests {
             &PixelColor::RED
         );
 
-        let image_builder = canvas.image_builder(PixelImageStyle::default().with_scale(5));
+        let image_builder = canvas.default_image_builder().with_scale(5);
         let image = image_builder.get_image();
         image.save("arts/basic.png").unwrap();
     }

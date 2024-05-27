@@ -1,5 +1,8 @@
 use super::{
-    canvas::{PixelCanvasInterface, SharedMutPixelCanvasExt, SharedPixelCanvasExt},
+    canvas::{
+        PixelCanvasInterface, PixelCanvasMutInterface, SharedMutPixelCanvasExt,
+        SharedPixelCanvasExt,
+    },
     color::PixelColor,
     position::{PixelPosition, PixelStrictPositionInterface},
     PixelInitializer, PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
@@ -7,8 +10,8 @@ use super::{
 
 /// A pixel that may not have any effect on the color at this position.
 pub struct MaybePixel {
+    pub color: Option<PixelColor>,
     position: PixelPosition,
-    color: Option<PixelColor>,
 }
 
 impl PixelInitializer for MaybePixel {
@@ -119,6 +122,6 @@ pub trait MaybePixelMutCanvasExt<const H: usize, const W: usize>:
 }
 
 impl<const H: usize, const W: usize, T> MaybePixelMutCanvasExt<H, W> for T where
-    T: PixelCanvasInterface<H, W, MaybePixel>
+    T: PixelCanvasMutInterface<H, W, MaybePixel>
 {
 }

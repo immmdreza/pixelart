@@ -55,7 +55,7 @@ mod tests {
 
         canvas.fill_inside(PixelColor::GREEN, StrictPositions::Center);
 
-        let image = canvas.image_builder_default().with_scale(5);
+        let image = canvas.default_image_builder().with_scale(5);
         image.save("arts/template_0.png").unwrap();
     }
 }

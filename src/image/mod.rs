@@ -7,12 +7,11 @@ use imageproc::{
 };
 
 use crate::pixels::{
+    canvas::PixelCanvasInterface,
     color::{IntoPixelColor, PixelColor, PixelColorExt, PixelColorInterface},
     position::PixelPositionInterface,
     Pixel, PixelInterface,
 };
-
-use super::PixelCanvasInterface;
 
 /// Styles use by [`PixelImageBuilder`].
 #[derive(Debug, Clone)]
