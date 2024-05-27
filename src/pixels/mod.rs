@@ -34,12 +34,22 @@ pub trait PixelMutInterface: PixelInterface {
     fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType;
 }
 
+pub(crate) trait PixelMutPosition {
+    fn update_position(&mut self, pos: PixelPosition);
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pixel {
     pub color: PixelColor,
 
     /// Can't be changed.
     position: PixelPosition,
+}
+
+impl PixelMutPosition for Pixel {
+    fn update_position(&mut self, pos: PixelPosition) {
+        self.position = pos;
+    }
 }
 
 impl Display for Pixel {

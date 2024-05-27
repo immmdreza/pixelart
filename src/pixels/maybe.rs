@@ -6,12 +6,20 @@ use super::{
     color::PixelColor,
     position::{PixelPosition, PixelStrictPositionInterface},
     PixelInitializer, PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
+    PixelMutPosition,
 };
 
 /// A pixel that may not have any effect on the color at this position.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MaybePixel {
     pub color: Option<PixelColor>,
     position: PixelPosition,
+}
+
+impl PixelMutPosition for MaybePixel {
+    fn update_position(&mut self, pos: PixelPosition) {
+        self.position = pos;
+    }
 }
 
 impl PixelInitializer for MaybePixel {

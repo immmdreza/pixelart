@@ -237,7 +237,7 @@ impl<
 #[cfg(test)]
 mod tests {
     use crate::{
-        pixels::canvas::{PixelCanvasMutExt, SharedMutPixelCanvasExt},
+        pixels::canvas::SharedMutPixelCanvasExt,
         prelude::{PixelCanvas, PixelCanvasExt, PixelColorExt, StrictPositions},
     };
 

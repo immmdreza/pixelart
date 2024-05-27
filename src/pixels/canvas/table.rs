@@ -5,8 +5,11 @@
 use std::{array, fmt::Display};
 
 use crate::pixels::{
-    position::{PixelPosition, PixelPositionInterface, PixelStrictPositionInterface},
-    Pixel, PixelInitializer, PixelInterface,
+    position::{
+        IntoPixelStrictPosition, PixelPosition, PixelPositionInterface,
+        PixelStrictPositionInterface,
+    },
+    Pixel, PixelInitializer, PixelInterface, PixelMutPosition,
 };
 
 use super::row::PixelRow;
@@ -14,7 +17,17 @@ use super::row::PixelRow;
 /// Represents a table of [`Pixel`]s. (A collection of [`PixelRow`]s).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelTable<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
-    pixels: [PixelRow<W, P>; H],
+    pub(crate) rows: [PixelRow<W, P>; H],
+}
+
+#[allow(private_bounds)]
+impl<const H: usize, const W: usize, P: PixelMutPosition + PixelInterface> PixelTable<H, W, P> {
+    pub(crate) fn sync_positions(&mut self) {
+        self.iter_mut().enumerate().for_each(|(row, pix_row)| {
+            pix_row.row = row;
+            pix_row.sync_positions()
+        })
+    }
 }
 
 impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for PixelTable<H, W, P> {
@@ -29,7 +42,7 @@ impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for Pi
 impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> PixelTable<H, W, P> {
     pub fn new(fill_color: impl Into<P::ColorType> + Clone) -> Self {
         Self {
-            pixels: array::from_fn(|row| PixelRow::new(row, fill_color.clone())),
+            rows: array::from_fn(|row| PixelRow::new(row, fill_color.clone())),
         }
     }
 }
@@ -120,13 +133,13 @@ impl<const H: usize, const W: usize, P: PixelInterface> IntoIterator for PixelTa
     type IntoIter = std::array::IntoIter<Self::Item, H>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.pixels.into_iter()
+        self.rows.into_iter()
     }
 }
 
 impl<const H: usize, const W: usize, P: PixelInterface> std::ops::DerefMut for PixelTable<H, W, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.pixels
+        &mut self.rows
     }
 }
 
@@ -134,7 +147,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Deref for Pixe
     type Target = [PixelRow<W, P>; H];
 
     fn deref(&self) -> &Self::Target {
-        &self.pixels
+        &self.rows
     }
 }
 
@@ -152,7 +165,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> std::ops::IndexMut<usize
     for PixelTable<H, W, P>
 {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.pixels[index]
+        &mut self.rows[index]
     }
 }
 
@@ -162,36 +175,39 @@ impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Index<usize>
     type Output = PixelRow<W, P>;
 
     fn index(&self, index: usize) -> &Self::Output {
-        &self.pixels[index]
+        &self.rows[index]
     }
 }
 
-impl<const H: usize, const W: usize, T: PixelStrictPositionInterface<H, W>, P: PixelInterface>
+impl<const H: usize, const W: usize, T: IntoPixelStrictPosition<H, W>, P: PixelInterface>
     std::ops::Index<T> for PixelTable<H, W, P>
 {
     type Output = P;
 
     fn index(&self, index: T) -> &Self::Output {
-        let (row, column) = index.expand();
+        let (row, column) = index.into_pixel_strict_position().expand();
         &self[row][column]
     }
 }
 
-impl<const H: usize, const W: usize, T: PixelStrictPositionInterface<H, W>, P: PixelInterface>
+impl<const H: usize, const W: usize, T: IntoPixelStrictPosition<H, W>, P: PixelInterface>
     std::ops::IndexMut<T> for PixelTable<H, W, P>
 {
     fn index_mut(&mut self, index: T) -> &mut Self::Output {
-        let (row, column) = index.expand();
+        let (row, column) = index.into_pixel_strict_position().expand();
         &mut self[row][column]
     }
 }
 
 #[cfg(test)]
 mod pixel_table_tests {
-    use crate::pixels::{
-        color::{PixelColor, PixelColorExt},
-        position::{PixelStrictPosition, PixelStrictPositionInterface},
-        PixelMutInterface,
+    use crate::{
+        pixels::{
+            color::{PixelColor, PixelColorExt},
+            position::{PixelStrictPosition, PixelStrictPositionInterface},
+            PixelMutInterface,
+        },
+        prelude::{PixelCanvas, PixelCanvasExt},
     };
 
     use super::*;
@@ -236,5 +252,26 @@ mod pixel_table_tests {
         for pix in table.iter_pixels_mut() {
             println!("{:?}", pix)
         }
+    }
+
+    #[test]
+    fn test_flip() {
+        let mut canvas = PixelCanvas::<5>::default();
+
+        canvas[0].iter_mut().for_each(|pix| {
+            pix.update_color(PixelColor::BLACK);
+        });
+
+        canvas.iter_mut().for_each(|row| {
+            row.last_mut().unwrap().update_color(PixelColor::CYAN);
+        });
+
+        canvas
+            .flip_x()
+            .flip_y()
+            .default_image_builder()
+            .with_scale(5)
+            .save("arts/flipped_0.png")
+            .unwrap();
     }
 }

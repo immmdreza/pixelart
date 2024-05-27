@@ -309,6 +309,18 @@ where
     }
 }
 
+impl<const H: usize, const W: usize> IntoPixelStrictPosition<H, W> for (usize, usize) {
+    fn into_pixel_strict_position(self) -> PixelStrictPosition<H, W> {
+        PixelStrictPosition::new(self.0, self.1).unwrap_or_else(|e| e.adjust())
+    }
+}
+
+impl<const H: usize, const W: usize> IntoPixelStrictPosition<H, W> for [usize; 2] {
+    fn into_pixel_strict_position(self) -> PixelStrictPosition<H, W> {
+        PixelStrictPosition::new(self[0], self[1]).unwrap_or_else(|e| e.adjust())
+    }
+}
+
 /// A set of common useful [`PixelStrictPosition`]s inside the container
 /// wrapped by square from `(H - 1, 0) -> bottom-left` to `(0, W - 1) -> top-right`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

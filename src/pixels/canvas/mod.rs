@@ -5,11 +5,11 @@ use crate::image::{PixelImageBuilder, PixelImageStyle};
 use self::{drawable::Drawable, pen::Pen, table::PixelTable};
 
 use super::{
-    color::{IntoPixelColor, PixelColor},
+    color::PixelColor,
     position::{
         IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle, MAIN_DIRECTIONS,
     },
-    Pixel, PixelInitializer, PixelInterface, PixelMutInterface,
+    Pixel, PixelInitializer, PixelInterface, PixelMutInterface, PixelMutPosition,
 };
 
 pub mod drawable;
@@ -39,6 +39,32 @@ pub trait PixelCanvasMutInterface<const H: usize, const W: usize, P: PixelMutInt
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelCanvas<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
     table: PixelTable<H, W, P>,
+}
+
+impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvas<H, W, P> {
+    #[allow(private_bounds)]
+    #[must_use = "This function returns a new table."]
+    pub fn flip_x(&mut self) -> PixelCanvas<H, W, P>
+    where
+        P: PixelMutPosition + Clone,
+    {
+        let mut canvas = self.clone();
+        canvas.rows.reverse();
+        canvas.sync_positions();
+        canvas
+    }
+
+    #[allow(private_bounds)]
+    #[must_use = "This function returns a new table."]
+    pub fn flip_y(&mut self) -> PixelCanvas<H, W, P>
+    where
+        P: PixelMutPosition + Clone,
+    {
+        let mut canvas = self.clone();
+        canvas.iter_mut().for_each(|row| row.reverse());
+        canvas.sync_positions();
+        canvas
+    }
 }
 
 impl<const H: usize, const W: usize, P> Default for PixelCanvas<H, W, P>
@@ -117,25 +143,31 @@ impl<const H: usize, const W: usize, P: PixelMutInterface> PixelCanvasMutInterfa
     }
 }
 
-fn _fill_inside<const H: usize, const W: usize, I: PixelCanvasMutExt<H, W>>(
+fn _fill_inside<
+    const H: usize,
+    const W: usize,
+    P: PixelMutInterface,
+    I: SharedMutPixelCanvasExt<H, W, P>,
+>(
     canvas: &mut I,
-    base_color: Option<PixelColor>,
-    color: impl IntoPixelColor,
+    base_color: Option<P::ColorType>,
+    color: impl Into<P::ColorType> + Clone,
     point_inside: impl IntoPixelStrictPosition<H, W>,
-) {
-    let new_color = color.into_pixel_color();
+) where
+    P::ColorType: PartialEq + Clone,
+{
     let pos = point_inside.into_pixel_strict_position();
-    let base_color = base_color.unwrap_or(*canvas.table()[&pos].color());
+    let base_color = base_color.unwrap_or(canvas.table()[&pos].color().clone());
 
-    canvas.update_color_at(&pos, new_color);
+    canvas.update_color_at(&pos, color.clone());
 
     for dir in
         SingleCycle::new(super::position::Direction::Up).filter(|dir| MAIN_DIRECTIONS.contains(dir))
     {
         if let Ok(new_pos) = pos.checked_direction(dir, 1) {
             if canvas.color_at(&new_pos) == &base_color {
-                canvas.update_color_at(&new_pos, new_color);
-                _fill_inside(canvas, Some(base_color), new_color, new_pos)
+                canvas.update_color_at(&new_pos, color.clone());
+                _fill_inside(canvas, Some(base_color.clone()), color.clone(), new_pos)
             }
         }
     }
@@ -193,6 +225,18 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         color: impl Into<P::ColorType>,
     ) -> P::ColorType {
         self.table_mut()[pos].update_color(color)
+    }
+
+    /// Keep filling pixels with new color until we encounter a new color.
+    fn fill_inside(
+        &mut self,
+        color: impl Into<P::ColorType> + std::clone::Clone,
+        point_inside: impl IntoPixelStrictPosition<H, W>,
+    ) where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: PartialEq + Clone,
+    {
+        _fill_inside::<H, W, P, _>(self, None, color, point_inside)
     }
 
     fn draw<const HD: usize, const WD: usize>(
@@ -276,16 +320,16 @@ impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where
 pub trait PixelCanvasMutExt<const H: usize, const W: usize>:
     SharedMutPixelCanvasExt<H, W, Pixel>
 {
-    /// Keep filling pixels with new color until we encounter a new color.
-    fn fill_inside(
-        &mut self,
-        color: impl IntoPixelColor,
-        point_inside: impl IntoPixelStrictPosition<H, W>,
-    ) where
-        Self: Sized,
-    {
-        _fill_inside::<H, W, _>(self, None, color, point_inside)
-    }
+    // /// Keep filling pixels with new color until we encounter a new color.
+    // fn fill_inside(
+    //     &mut self,
+    //     color: impl IntoPixelColor,
+    //     point_inside: impl IntoPixelStrictPosition<H, W>,
+    // ) where
+    //     Self: Sized,
+    // {
+    //     _fill_inside::<H, W, _>(self, None, color, point_inside)
+    // }
 }
 
 impl<const H: usize, const W: usize, T> PixelCanvasMutExt<H, W> for T where

@@ -2,6 +2,10 @@
 
 Code to pixel image! This is what this library dose at the moment.
 
+![Alien monster](arts/alien_monster.png)
+
+**Made by pixelart 👾** _([This is how](src/pixels/canvas/templates/alien_monster.rs))_.
+
 ## Why?
 
 The very first-stone purpose of this lib is to somehow visualize what your code

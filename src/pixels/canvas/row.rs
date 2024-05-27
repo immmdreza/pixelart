@@ -4,13 +4,23 @@
 
 use std::{array, fmt::Display};
 
-use crate::pixels::{position::PixelPosition, PixelInitializer, PixelInterface};
+use crate::pixels::{position::PixelPosition, PixelInitializer, PixelInterface, PixelMutPosition};
 /// Represents a row of [`Pixel`]s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelRow<const W: usize, P: PixelInterface> {
     /// Row number staring from 0. (row index)
     pub(super) row: usize,
     pub(super) pixels: [P; W],
+}
+
+#[allow(private_bounds)]
+impl<const W: usize, P: PixelMutPosition + PixelInterface> PixelRow<W, P> {
+    pub(crate) fn sync_positions(&mut self) {
+        let row = self.row;
+        self.iter_mut()
+            .enumerate()
+            .for_each(move |(column, pix)| pix.update_position(PixelPosition::new(row, column)));
+    }
 }
 
 impl<const W: usize, P: PixelInterface + Display> Display for PixelRow<W, P> {

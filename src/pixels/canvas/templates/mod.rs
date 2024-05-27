@@ -1,10 +1,41 @@
+pub mod alien_monster;
+
 use crate::pixels::{
     color::IntoPixelColor,
     maybe::MaybePixel,
     position::{PixelStrictPositionInterface, StrictPositions},
 };
 
-use super::{PixelCanvas, SharedMutPixelCanvasExt};
+use super::{drawable::Drawable, PixelCanvas, PixelCanvasMutInterface, SharedMutPixelCanvasExt};
+
+pub trait Template<const H: usize, const W: usize> {
+    fn define<C: PixelCanvasMutInterface<H, W, MaybePixel>>(&self, canvas: &mut C);
+
+    fn create(&self) -> PixelCanvas<H, W, MaybePixel> {
+        let mut canvas = PixelCanvas::<H, W, MaybePixel>::default();
+        self.define(&mut canvas);
+        canvas
+    }
+
+    fn apply_existing<C: PixelCanvasMutInterface<H, W, MaybePixel>>(&self, canvas: &mut C) {
+        self.define(canvas)
+    }
+}
+
+impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W> for T {
+    fn draw_on<const HC: usize, const WC: usize, P, C>(
+        &self,
+        start_pos: impl crate::pixels::position::IntoPixelStrictPosition<HC, WC>,
+        canvas: &mut C,
+    ) where
+        P: crate::pixels::PixelMutInterface,
+        C: PixelCanvasMutInterface<HC, WC, P>,
+        <P as crate::pixels::PixelInterface>::ColorType: From<crate::prelude::PixelColor>,
+    {
+        let template = self.create();
+        canvas.draw(start_pos, template)
+    }
+}
 
 /// A template vertical line with const `H` height.
 pub fn vertical_line<const H: usize>(color: impl IntoPixelColor) -> PixelCanvas<H, 1, MaybePixel> {
@@ -42,7 +73,7 @@ pub fn square<const H: usize, const W: usize>(
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::{PixelCanvasExt, PixelCanvasMutExt},
+        canvas::PixelCanvasExt,
         color::{PixelColor, PixelColorExt},
     };
 
