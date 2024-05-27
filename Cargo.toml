@@ -5,6 +5,13 @@ members = [".", "examples"]
 name = "pixelart"
 version = "0.1.0"
 edition = "2021"
+description = "Show everyone the art hidden inside your code AGAIN."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/immmdreza/pixelart"
+license-file = "LICENSE"
+keywords = ["pixel", "graphics", "pixelart", "art", "gif"]
+exclude = ["arts/", ".vscode/", "/target", "/examples"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
