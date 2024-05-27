@@ -9,7 +9,6 @@ description = "Show everyone the art hidden inside your code AGAIN."
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/immmdreza/pixelart"
-license-file = "LICENSE"
 keywords = ["pixel", "graphics", "pixelart", "art", "gif"]
 exclude = ["arts/", ".vscode/", "/target", "/examples"]
 
