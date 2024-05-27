@@ -541,9 +541,13 @@ mod tests {
         let mut single = SingleCycle::new(Down);
 
         assert_eq!(Some(Down), single.next());
+        assert_eq!(Some(DownLeft), single.next());
         assert_eq!(Some(Left), single.next());
+        assert_eq!(Some(UpLeft), single.next());
         assert_eq!(Some(Up), single.next());
+        assert_eq!(Some(UpRight), single.next());
         assert_eq!(Some(Right), single.next());
+        assert_eq!(Some(DownRight), single.next());
         assert_eq!(None, single.next());
     }
 }
