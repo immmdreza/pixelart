@@ -87,7 +87,7 @@ impl Template<17, 20> for AlienMonster {
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::{PixelCanvas, PixelCanvasExt};
+    use crate::{pixels::canvas::SharedPixelCanvasExt, prelude::PixelCanvas};
 
     use super::*;
 

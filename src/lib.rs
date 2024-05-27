@@ -5,7 +5,7 @@ pub mod prelude;
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::{PixelCanvas, PixelCanvasExt},
+        canvas::{PixelCanvas, SharedPixelCanvasExt},
         color::{PixelColor, PixelColorExt},
         position::{PixelPositionInterface, StrictPositions},
         PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,

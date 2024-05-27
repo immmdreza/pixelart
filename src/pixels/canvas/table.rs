@@ -203,11 +203,12 @@ impl<const H: usize, const W: usize, T: IntoPixelStrictPosition<H, W>, P: PixelI
 mod pixel_table_tests {
     use crate::{
         pixels::{
+            canvas::SharedPixelCanvasExt,
             color::{PixelColor, PixelColorExt},
             position::{PixelStrictPosition, PixelStrictPositionInterface},
             PixelMutInterface,
         },
-        prelude::{PixelCanvas, PixelCanvasExt},
+        prelude::PixelCanvas,
     };
 
     use super::*;

@@ -6,6 +6,7 @@ use self::{drawable::Drawable, pen::Pen, table::PixelTable};
 
 use super::{
     color::PixelColor,
+    maybe::MaybePixel,
     position::{
         IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle, MAIN_DIRECTIONS,
     },
@@ -40,6 +41,8 @@ pub trait PixelCanvasMutInterface<const H: usize, const W: usize, P: PixelMutInt
 pub struct PixelCanvas<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
     table: PixelTable<H, W, P>,
 }
+
+pub type MaybePixelCanvas<const H: usize, const W: usize = H> = PixelCanvas<H, W, MaybePixel>;
 
 impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvas<H, W, P> {
     #[allow(private_bounds)]
@@ -179,6 +182,22 @@ fn _fill_inside<
 pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface>:
     PixelCanvasInterface<H, W, P>
 {
+    /// Get an [`PixelImageBuilder`] based on this canvas with [`PixelImageStyle`] specified.
+    fn image_builder(&self, style: PixelImageStyle) -> PixelImageBuilder<H, W, P, Self>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new(self, style)
+    }
+
+    /// Get an [`PixelImageBuilder`] based on this canvas with default [`PixelImageStyle`].
+    fn default_image_builder(&self) -> PixelImageBuilder<H, W, P, Self>
+    where
+        Self: Sized,
+    {
+        PixelImageBuilder::new_default_style(self)
+    }
+
     /// Gets the color of a pixel at given position.
     fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &P::ColorType
     where
@@ -294,21 +313,6 @@ impl<const H: usize, const W: usize, T, P: PixelMutInterface> SharedMutPixelCanv
 pub trait PixelCanvasExt<const H: usize, const W: usize>:
     SharedPixelCanvasExt<H, W, Pixel>
 {
-    /// Get an [`PixelImageBuilder`] based on this canvas with [`PixelImageStyle`] specified.
-    fn image_builder(&self, style: PixelImageStyle) -> PixelImageBuilder<H, W, Pixel, Self>
-    where
-        Self: Sized,
-    {
-        PixelImageBuilder::new(self, style)
-    }
-
-    /// Get an [`PixelImageBuilder`] based on this canvas with default [`PixelImageStyle`].
-    fn default_image_builder(&self) -> PixelImageBuilder<H, W, Pixel, Self>
-    where
-        Self: Sized,
-    {
-        PixelImageBuilder::new_default_style(self)
-    }
 }
 
 impl<const H: usize, const W: usize, T> PixelCanvasExt<H, W> for T where

@@ -96,7 +96,7 @@ impl<const H: usize, const W: usize> Drawable<H, W> for &PixelCanvas<H, W, Maybe
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::{PixelCanvasExt, SharedMutPixelCanvasExt},
+        canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt},
         color::{PixelColor, PixelColorExt},
         position::{PixelStrictPosition, StrictPositions},
         PixelIterExt, PixelIterMutExt,

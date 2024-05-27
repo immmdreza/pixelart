@@ -73,7 +73,7 @@ pub fn square<const H: usize, const W: usize>(
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
-        canvas::PixelCanvasExt,
+        canvas::SharedPixelCanvasExt,
         color::{PixelColor, PixelColorExt},
     };
 

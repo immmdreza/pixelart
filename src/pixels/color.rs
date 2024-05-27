@@ -2,6 +2,10 @@ use std::fmt::Display;
 
 use image::{Rgb, Rgba};
 
+pub trait RgbaInterface {
+    fn rgba(&self) -> Rgba<u8>;
+}
+
 /// An interface for [`PixelColor`].
 pub trait PixelColorInterface {
     fn r(&self) -> u8;
@@ -13,10 +17,6 @@ pub trait PixelColorInterface {
     fn rgb(&self) -> Rgb<u8> {
         Rgb([self.r(), self.g(), self.b()])
     }
-
-    fn rgba(&self) -> Rgba<u8> {
-        Rgba([self.r(), self.g(), self.b(), u8::MAX])
-    }
 }
 
 /// Simple RGB color of a pixel.
@@ -27,6 +27,51 @@ pub struct PixelColor {
     r: u8,
     g: u8,
     b: u8,
+}
+
+impl RgbaInterface for PixelColor {
+    fn rgba(&self) -> Rgba<u8> {
+        Rgba([self.r(), self.g(), self.b(), u8::MAX])
+    }
+}
+
+impl RgbaInterface for &PixelColor {
+    fn rgba(&self) -> Rgba<u8> {
+        Rgba([self.r(), self.g(), self.b(), u8::MAX])
+    }
+}
+
+impl RgbaInterface for &mut PixelColor {
+    fn rgba(&self) -> Rgba<u8> {
+        Rgba([self.r(), self.g(), self.b(), u8::MAX])
+    }
+}
+
+impl RgbaInterface for Option<PixelColor> {
+    fn rgba(&self) -> Rgba<u8> {
+        match self {
+            Some(color) => color.rgba(),
+            None => Rgba([0, 0, 0, 0]),
+        }
+    }
+}
+
+impl RgbaInterface for &Option<PixelColor> {
+    fn rgba(&self) -> Rgba<u8> {
+        match self {
+            Some(color) => color.rgba(),
+            None => Rgba([0, 0, 0, 0]),
+        }
+    }
+}
+
+impl RgbaInterface for &mut Option<PixelColor> {
+    fn rgba(&self) -> Rgba<u8> {
+        match self {
+            Some(color) => color.rgba(),
+            None => Rgba([0, 0, 0, 0]),
+        }
+    }
 }
 
 impl Display for PixelColor {
