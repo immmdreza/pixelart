@@ -295,7 +295,7 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>:
     SharedPixelCanvasExt<H, W, Pixel>
 {
     /// Get an [`PixelImageBuilder`] based on this canvas with [`PixelImageStyle`] specified.
-    fn image_builder(&self, style: PixelImageStyle) -> PixelImageBuilder<H, W, Self>
+    fn image_builder(&self, style: PixelImageStyle) -> PixelImageBuilder<H, W, Pixel, Self>
     where
         Self: Sized,
     {
@@ -303,7 +303,7 @@ pub trait PixelCanvasExt<const H: usize, const W: usize>:
     }
 
     /// Get an [`PixelImageBuilder`] based on this canvas with default [`PixelImageStyle`].
-    fn default_image_builder(&self) -> PixelImageBuilder<H, W, Self>
+    fn default_image_builder(&self) -> PixelImageBuilder<H, W, Pixel, Self>
     where
         Self: Sized,
     {

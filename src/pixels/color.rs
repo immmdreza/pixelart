@@ -208,6 +208,24 @@ pub trait PixelColorExt: PixelColorInterface {
 
 impl<T> PixelColorExt for T where T: PixelColorInterface {}
 
+impl Into<Rgba<u8>> for PixelColor {
+    fn into(self) -> Rgba<u8> {
+        self.rgba()
+    }
+}
+
+impl Into<Rgba<u8>> for &PixelColor {
+    fn into(self) -> Rgba<u8> {
+        self.rgba()
+    }
+}
+
+impl Into<Rgba<u8>> for &mut PixelColor {
+    fn into(self) -> Rgba<u8> {
+        self.rgba()
+    }
+}
+
 #[cfg(test)]
 mod pixel_color_tests {
     use super::*;
