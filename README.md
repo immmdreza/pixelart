@@ -70,7 +70,7 @@ Let's break down and see what happened though it must be clear enough.
     // ---- sniff ----
     ```
 
-    The result will be
+    The result will be:
 
     ![Your mini first art](arts/my_mini_first_art.png)
 

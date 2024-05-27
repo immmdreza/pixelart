@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use image::{ImageBuffer, Rgba};
+use image::{ImageBuffer, Rgb};
 use imageproc::{
     drawing::{draw_filled_rect_mut, Canvas},
     rect::Rect,
@@ -18,8 +18,8 @@ use crate::pixels::{
 pub struct PixelImageStyle {
     pixel_width: usize,
     separator_width: usize,
-    background: Rgba<u8>,
-    separator_color: Rgba<u8>,
+    background: Rgb<u8>,
+    separator_color: Rgb<u8>,
 }
 
 impl Default for PixelImageStyle {
@@ -38,8 +38,8 @@ impl PixelImageStyle {
         Self {
             pixel_width,
             separator_width,
-            background: background.into_pixel_color().rgba(),
-            separator_color: separator_color.into_pixel_color().rgba(),
+            background: background.into_pixel_color().rgb(),
+            separator_color: separator_color.into_pixel_color().rgb(),
         }
     }
 
@@ -83,7 +83,7 @@ where
         }
     }
 
-    fn get_pixel_paper_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    fn get_pixel_paper_image(&self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         let separator_pixel_length = self.style.separator_width;
 
         // How many pixels in height for blocks
@@ -98,7 +98,7 @@ where
         let separators_pixel_in_width = separators_count_in_width * separator_pixel_length;
         let width = blocks_pixel_in_width + separators_pixel_in_width;
 
-        let mut image: ImageBuffer<Rgba<u8>, Vec<u8>> =
+        let mut image: ImageBuffer<Rgb<u8>, Vec<u8>> =
             ImageBuffer::new(width as u32, height as u32);
 
         draw_filled_rect_mut(
@@ -136,8 +136,8 @@ where
 
     fn draw_to_image_pixels(
         &self,
-        image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>,
-        color: Rgba<u8>,
+        image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>,
+        color: Rgb<u8>,
         row: usize,
         column: usize,
     ) {
@@ -163,14 +163,14 @@ where
     }
 
     /// Draws the associated [`PixelCanvasInterface`] to an image buffer.
-    pub fn draw_on_image(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    pub fn draw_on_image(&self, image: &mut ImageBuffer<Rgb<u8>, Vec<u8>>) {
         let table = self.canvas_ref.table();
 
         for row in table.iter() {
             for pixel in row.iter() {
                 self.draw_to_image_pixels(
                     image,
-                    pixel.color().rgba(),
+                    pixel.color().rgb(),
                     pixel.position().column(),
                     pixel.position().row(),
                 )
@@ -179,7 +179,7 @@ where
     }
 
     /// Returns an [`ImageBuffer`] based on the current canvas attached.
-    pub fn get_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    pub fn get_image(&self) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
         let mut image = self.get_pixel_paper_image();
         self.draw_on_image(&mut image);
 
