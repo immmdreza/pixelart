@@ -23,7 +23,7 @@ pub struct PixelImageStyle {
 
 impl Default for PixelImageStyle {
     fn default() -> Self {
-        Self::new(10, 1, 100)
+        Self::new(10, 1, 50)
     }
 }
 

@@ -87,13 +87,13 @@ impl Template<17, 20> for AlienMonster {
 
 #[cfg(test)]
 mod tests {
-    use crate::{pixels::canvas::SharedPixelCanvasExt, prelude::PixelCanvas};
+    use crate::pixels::canvas::{MaybePixelCanvas, SharedPixelCanvasExt};
 
     use super::*;
 
     #[test]
     fn monster() {
-        let mut canvas = PixelCanvas::<17, 20>::default();
+        let mut canvas = MaybePixelCanvas::<17, 20>::default();
         canvas.draw_exact_abs(AlienMonster);
 
         canvas
