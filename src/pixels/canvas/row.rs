@@ -5,7 +5,7 @@
 use std::{array, fmt::Display};
 
 use crate::pixels::{position::PixelPosition, PixelInitializer, PixelInterface, PixelMutPosition};
-/// Represents a row of [`Pixel`]s.
+/// Represents a row of [`Pixel`](crate::pixels::Pixel)s.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelRow<const W: usize, P: PixelInterface> {
     /// Row number staring from 0. (row index)

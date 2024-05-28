@@ -24,7 +24,7 @@ pub trait Drawable<const H: usize, const W: usize> {
         C: PixelCanvasMutInterface<HC, WC, P>,
         <P as PixelInterface>::ColorType: From<PixelColor>;
 
-    /// As same as [`draw_on`] but the `H` and `W` on canvas and drawable are same
+    /// As same as [`Drawable::draw_on`] but the `H` and `W` on canvas and drawable are same
     fn draw_on_exact<P, C>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
     where
         P: PixelMutInterface,
@@ -34,7 +34,7 @@ pub trait Drawable<const H: usize, const W: usize> {
         self.draw_on::<H, W, P, C>(start_pos, canvas)
     }
 
-    /// As same as [`draw_on_exact`] but the start point is TopLeft (0, 0).
+    /// As same as [`Drawable::draw_on_exact`] but the start point is TopLeft (0, 0).
     fn draw_on_exact_abs<P, C>(&self, canvas: &mut C)
     where
         P: PixelMutInterface,

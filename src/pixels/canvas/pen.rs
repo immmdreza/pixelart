@@ -63,7 +63,28 @@ impl<Co> CanvasAttachment for CanvasUnattachedMarker<Co> {
     type ColorType = Co;
 }
 
-/// Pen can be attached to a canvas and do fun things on it.
+/**
+Pen can be attached to a canvas and do fun things on it.
+
+## Example
+```rust
+# use pixelart::prelude::PixelCanvas;
+# use pixelart::prelude::PixelColor;
+# use pixelart::prelude::StrictPositions;
+# use crate::pixelart::pixels::canvas::SharedMutPixelCanvasExt;
+# use crate::pixelart::pixels::color::PixelColorExt;
+
+let mut canvas = PixelCanvas::<5>::default();
+
+canvas
+    .attach_new_pen(PixelColor::CYAN, StrictPositions::BottomCenter)
+    .start_drawing()
+    .up(2)
+    // Returns to the position before branching when you're done.
+    .branch(|pen| pen.up_left(2))
+    .up_right(2);
+```
+*/
 pub struct Pen<M: CanvasAttachment = CanvasUnattachedMarker> {
     canvas: M::CanvasType,
     color: M::ColorType,
@@ -72,7 +93,7 @@ pub struct Pen<M: CanvasAttachment = CanvasUnattachedMarker> {
 }
 
 impl<M: CanvasAttachment> Pen<M> {
-    pub fn stop_drawing(&mut self) -> &mut Pen<M> {
+    pub fn stop(&mut self) -> &mut Pen<M> {
         self.drawing = false;
         self
     }
@@ -144,7 +165,7 @@ impl<
         self
     }
 
-    pub fn start_drawing(&mut self) -> &mut Self
+    pub fn start(&mut self) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
@@ -170,56 +191,56 @@ impl<
         self
     }
 
-    pub fn go_up(&mut self, how_many: usize) -> &mut Self
+    pub fn up(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Up, how_many)
     }
 
-    pub fn go_down(&mut self, how_many: usize) -> &mut Self
+    pub fn down(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Down, how_many)
     }
 
-    pub fn go_left(&mut self, how_many: usize) -> &mut Self
+    pub fn left(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Left, how_many)
     }
 
-    pub fn go_right(&mut self, how_many: usize) -> &mut Self
+    pub fn right(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Right, how_many)
     }
 
-    pub fn go_up_right(&mut self, how_many: usize) -> &mut Self
+    pub fn up_right(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::UpRight, how_many)
     }
 
-    pub fn go_down_right(&mut self, how_many: usize) -> &mut Self
+    pub fn down_right(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::DownRight, how_many)
     }
 
-    pub fn go_down_left(&mut self, how_many: usize) -> &mut Self
+    pub fn down_left(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::DownLeft, how_many)
     }
 
-    pub fn go_up_left(&mut self, how_many: usize) -> &mut Self
+    pub fn up_left(&mut self, how_many: usize) -> &mut Self
     where
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
@@ -236,9 +257,10 @@ impl<
 
 #[cfg(test)]
 mod tests {
+    use crate::pixels::color::PixelColorExt;
     use crate::{
         pixels::canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt},
-        prelude::{PixelCanvas, PixelColorExt, StrictPositions},
+        prelude::{PixelCanvas, StrictPositions},
     };
 
     use super::*;
@@ -255,11 +277,11 @@ mod tests {
 
         let mut attached_pen = blue_pen.attach(&mut canvas, StrictPositions::TopLeft);
         attached_pen
-            .start_drawing()
-            .go_right(2)
-            .go_down_right(2)
-            .go_down_left(2)
-            .go_left(2);
+            .start()
+            .right(2)
+            .down_right(2)
+            .down_left(2)
+            .left(2);
 
         canvas.fill_inside(PixelColor::CYAN, StrictPositions::LeftCenter);
 
@@ -276,10 +298,10 @@ mod tests {
 
         canvas
             .attach_new_pen(PixelColor::CYAN, StrictPositions::BottomCenter)
-            .start_drawing()
-            .go_up(2)
-            .branch(|pen| pen.go_up_left(2))
-            .go_up_right(2);
+            .start()
+            .up(2)
+            .branch(|pen| pen.up_left(2))
+            .up_right(2);
 
         canvas
             .default_image_builder()

@@ -1,10 +1,10 @@
 pub use crate::pixels::{
     canvas::{
-        drawable::Drawable, PixelCanvas, PixelCanvasExt, PixelCanvasMutExt,
-        SharedMutPixelCanvasExt, SharedPixelCanvasExt,
+        drawable::Drawable, MaybePixelCanvas, PixelCanvas, PixelCanvasExt as _,
+        PixelCanvasMutExt as _, SharedMutPixelCanvasExt as _, SharedPixelCanvasExt as _,
     },
-    color::{PixelColor, PixelColorExt},
+    color::{PixelColor, PixelColorExt as _},
     maybe::MaybePixel,
-    position::{PixelPositionInterface, StrictPositions},
-    Pixel, PixelIterExt, PixelIterMutExt,
+    position::{PixelPositionInterface as _, StrictPositions},
+    Pixel, PixelInterface as _, PixelIterExt as _, PixelIterMutExt as _, PixelMutInterface as _,
 };

@@ -55,11 +55,11 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///
     /// ## Example of indexing
     /// ```rust
-    /// let table = PixelTable::<5>::default();
-    /// // Here the code will panic if the position is unbound,
-    /// // You can use .unwrap_or_else(|e| e.adjust()) instead to make it fit in that case.
-    /// let pos = PixelStrictPosition::new(0, 0).unwrap();
-    /// let pixel = &table[pos]
+    /// # use pixelart::pixels::canvas::table::PixelTable;
+    /// # let table = PixelTable::<5>::default();
+    /// let pos = (0, 0);
+    /// // The pos will be ensured to be in range even if it's not.
+    /// let pixel = &table[pos];
     /// ```
     pub fn get_pixel(&self, pos: PixelPosition) -> Option<&P> {
         let (row, column) = pos.expand();
@@ -73,11 +73,10 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///
     /// ## Example of indexing
     /// ```rust
-    /// let table = PixelTable::<5>::default();
-    /// // Here the code will panic if the position is unbound,
-    /// // You can use .unwrap_or_else(|e| e.adjust()) instead to make it fit in that case.
-    /// let pos = PixelStrictPosition::new(0, 0).unwrap();
-    /// let pixel = &mut table[pos]
+    /// # use pixelart::pixels::canvas::table::PixelTable;
+    /// # let mut table = PixelTable::<5>::default();
+    /// let pos = (0, 0);
+    /// let pixel = &mut table[pos];
     /// ```
     pub fn get_pixel_mut(&mut self, pos: PixelPosition) -> Option<&mut P> {
         let (row, column) = pos.expand();
@@ -88,9 +87,11 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///
     /// ## Example
     /// ```rust
-    /// let mut table = PixelTable::<2>::default();
+    /// # use pixelart::pixels::canvas::table::PixelTable;
+    /// # use crate::pixelart::pixels::PixelInterface;
+    /// # let mut table = PixelTable::<2>::default();
     /// for pix in table.iter_pixels() {
-    ///     println!("{:?}", pix.position)
+    ///     println!("{:?}", pix.position())
     /// }
     /// ```
     pub fn iter_pixels(&self) -> impl Iterator<Item = &P> {
@@ -101,10 +102,12 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///
     /// ## Example
     /// ```rust
-    /// let mut table = PixelTable::<2>::default();
+    /// # use pixelart::pixels::canvas::table::PixelTable;
+    /// # use crate::pixelart::pixels::PixelInterface;
+    /// # let mut table = PixelTable::<2>::default();
     /// for pix in table.iter_pixels_mut() {
     ///     // You can edit pixel here.
-    ///     println!("{:?}", pix.position)
+    ///     println!("{:?}", pix.position())
     /// }
     /// ```
     pub fn iter_pixels_mut(&mut self) -> impl Iterator<Item = &mut P> {

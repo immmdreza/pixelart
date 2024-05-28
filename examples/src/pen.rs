@@ -11,11 +11,11 @@ pub fn create_attach_detach() {
 
     let mut attached_pen = blue_pen.attach(&mut canvas, StrictPositions::TopLeft);
     attached_pen
-        .start_drawing()
-        .go_right(2)
-        .go_down_right(2)
-        .go_down_left(2)
-        .go_left(2);
+        .start()
+        .right(2)
+        .down_right(2)
+        .down_left(2)
+        .left(2);
 
     canvas.fill_inside(PixelColor::CYAN, StrictPositions::LeftCenter);
 
@@ -31,10 +31,10 @@ pub fn branching() {
 
     canvas
         .attach_new_pen(PixelColor::CYAN, StrictPositions::BottomCenter)
-        .start_drawing()
-        .go_up(2)
-        .branch(|pen| pen.go_up_left(2))
-        .go_up_right(2);
+        .start()
+        .up(2)
+        .branch(|pen| pen.up_left(2))
+        .up_right(2);
 
     canvas
         .default_image_builder()

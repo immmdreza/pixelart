@@ -1,6 +1,7 @@
+use crate::pixels::canvas::SharedMutPixelCanvasExt;
 use crate::{
-    pixels::{position::PixelStrictPositionInterface, PixelMutInterface},
-    prelude::{MaybePixel, PixelColor, PixelColorExt, SharedMutPixelCanvasExt, StrictPositions},
+    pixels::{color::PixelColorExt, position::PixelStrictPositionInterface, PixelMutInterface},
+    prelude::{MaybePixel, PixelColor, StrictPositions},
 };
 
 use super::Template;
@@ -14,48 +15,40 @@ impl Template<17, 10> for HalfAlienMonster {
     ) {
         canvas
             .attach_new_pen(PixelColor::BLACK, StrictPositions::BottomLeft)
-            .go_up(4)
-            .start_drawing()
-            .go_right(1)
-            .go_down(2)
-            .go_right(5)
-            .go_down(2)
-            .go_left(2)
-            .go_up(4)
-            .go_right(2)
-            .branch(|pen| pen.go_up(2))
-            .go_right(1)
-            .go_up(2)
-            .go_right(1)
-            .go_up(1)
-            .go_right(1)
-            .go_up(5)
-            .go_left(2)
-            .branch(|pen| pen.go_down(4))
-            .go_up(2)
-            .go_left(1)
-            .branch(|pen| {
-                pen.go_up(2)
-                    .go_left(2)
-                    .go_down(4)
-                    .go_right(1)
-                    .go_down(1)
-                    .go_right(1)
-                    .go_down(3)
-            })
-            .go_left(3)
-            .branch(|pen| pen.go_down(1))
-            .go_up(1)
-            .go_left(2)
-            .go_down(2)
-            .go_left(1)
-            .stop_drawing()
-            .go_down(4)
-            .go_right(2)
-            .start_drawing()
-            .go_down(2)
-            .go_right(1)
-            .go_up(2);
+            .up(4)
+            .start()
+            .right(1)
+            .down(2)
+            .right(5)
+            .down(2)
+            .left(2)
+            .up(4)
+            .right(2)
+            .branch(|pen| pen.up(2))
+            .right(1)
+            .up(2)
+            .right(1)
+            .up(1)
+            .right(1)
+            .up(5)
+            .left(2)
+            .branch(|pen| pen.down(4))
+            .up(2)
+            .left(1)
+            .branch(|pen| pen.up(2).left(2).down(4).right(1).down(1).right(1).down(3))
+            .left(3)
+            .branch(|pen| pen.down(1))
+            .up(1)
+            .left(2)
+            .down(2)
+            .left(1)
+            .stop()
+            .down(4)
+            .right(2)
+            .start()
+            .down(2)
+            .right(1)
+            .up(2);
 
         let color = PixelColor::from_red(106).blue(127);
 
@@ -87,7 +80,7 @@ impl Template<17, 20> for AlienMonster {
 
 #[cfg(test)]
 mod tests {
-    use crate::pixels::canvas::{MaybePixelCanvas, SharedPixelCanvasExt};
+    use crate::pixels::canvas::{MaybePixelCanvas, SharedMutPixelCanvasExt, SharedPixelCanvasExt};
 
     use super::*;
 

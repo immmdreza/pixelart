@@ -208,11 +208,13 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        pixels::canvas::{MaybePixelCanvas, SharedPixelCanvasExt},
-        prelude::{
-            PixelCanvas, PixelColor, PixelColorExt, PixelIterExt, PixelIterMutExt,
-            PixelPositionInterface,
+        pixels::{
+            canvas::{MaybePixelCanvas, SharedPixelCanvasExt as _},
+            color::PixelColorExt as _,
+            position::PixelPositionInterface as _,
+            PixelIterExt, PixelIterMutExt as _,
         },
+        prelude::{PixelCanvas, PixelColor},
     };
 
     #[test]
