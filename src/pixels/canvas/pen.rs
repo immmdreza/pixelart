@@ -78,7 +78,7 @@ let mut canvas = PixelCanvas::<5>::default();
 
 canvas
     .attach_new_pen(PixelColor::CYAN, StrictPositions::BottomCenter)
-    .start_drawing()
+    .start()
     .up(2)
     // Returns to the position before branching when you're done.
     .branch(|pen| pen.up_left(2))
