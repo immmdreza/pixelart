@@ -3,7 +3,7 @@ members = [".", "examples"]
 
 [package]
 name = "pixelart"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Show everyone the art hidden inside your code AGAIN."
 license = "MIT"
