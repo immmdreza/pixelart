@@ -1,3 +1,6 @@
+//! Generates pixel images from any thing that implements [`PixelCanvasInterface`].
+//!
+
 use std::{marker::PhantomData, path::Path};
 
 use image::{ImageBuffer, Rgba};

@@ -1,5 +1,9 @@
 # (What is) PixelArt👾?
 
+[![Rust](https://github.com/immmdreza/pixelart/actions/workflows/rust.yml/badge.svg)](https://github.com/immmdreza/pixelart/actions/workflows/rust.yml)
+![crates.io](https://img.shields.io/crates/v/pixelart.svg)
+[![Documentation](https://docs.rs/pixelart/badge.svg)](https://docs.rs/pixelart)
+
 Code to pixel image! This is what this library dose at the moment.
 
 ![Alien monster](arts/alien_monster.png)
