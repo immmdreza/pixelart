@@ -2,6 +2,20 @@ use std::fmt::Display;
 
 use thiserror::Error;
 
+pub mod strict {
+    use super::StrictPositions;
+
+    pub const TOP_CENTER: StrictPositions = StrictPositions::TopCenter;
+    pub const TOP_RIGHT: StrictPositions = StrictPositions::TopRight;
+    pub const TOP_LEFT: StrictPositions = StrictPositions::TopLeft;
+    pub const RIGHT_CENTER: StrictPositions = StrictPositions::RightCenter;
+    pub const CENTER: StrictPositions = StrictPositions::Center;
+    pub const BOTTOM_RIGHT: StrictPositions = StrictPositions::BottomRight;
+    pub const BOTTOM_CENTER: StrictPositions = StrictPositions::BottomCenter;
+    pub const BOTTOM_LEFT: StrictPositions = StrictPositions::BottomLeft;
+    pub const LEFT_CENTER: StrictPositions = StrictPositions::LeftCenter;
+}
+
 pub const MAIN_DIRECTIONS: [Direction; 4] = [
     Direction::Up,
     Direction::Right,
@@ -403,11 +417,13 @@ pub enum Direction {
     /// Going down.
     Down,
 
+    /// Down left.
     DownLeft,
 
     /// Going left.
     Left,
 
+    /// Up left.
     UpLeft,
 }
 

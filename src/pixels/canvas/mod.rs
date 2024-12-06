@@ -1,5 +1,7 @@
 //! Module contains types related to a [`PixelCanvas`].
 
+use partition::{BoxIndicator, CanvasPartition};
+
 use crate::image::{PixelImageBuilder, PixelImageStyle};
 
 use self::{drawable::Drawable, pen::Pen, table::PixelTable};
@@ -14,6 +16,7 @@ use super::{
 };
 
 pub mod drawable;
+pub mod partition;
 pub mod pen;
 pub mod row;
 pub mod table;
@@ -205,6 +208,18 @@ pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface
     {
         self.table()[pos].color()
     }
+
+    fn partition<'a>(
+        &'a self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+        bottom_right: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<H, W, P, &'a Self>
+    where
+        Self: Sized,
+        &'a Self: PixelCanvasInterface<H, W, P>,
+    {
+        CanvasPartition::new(self, BoxIndicator::new(top_left, bottom_right))
+    }
 }
 
 impl<const H: usize, const W: usize, T, P: PixelInterface> SharedPixelCanvasExt<H, W, P> for T where
@@ -299,6 +314,18 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
     {
         let pen = Pen::new(color);
         pen.attach(self, start_pos)
+    }
+
+    fn partition_mut<'a>(
+        &'a mut self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+        bottom_right: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<H, W, P, &'a mut Self>
+    where
+        Self: Sized,
+        &'a mut Self: PixelCanvasInterface<H, W, P>,
+    {
+        CanvasPartition::new(self, BoxIndicator::new(top_left, bottom_right))
     }
 }
 

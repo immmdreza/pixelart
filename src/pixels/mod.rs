@@ -165,9 +165,11 @@ pub trait PixelIterExt<Item: PixelInterface>: Iterator<Item = Item> {
     }
 }
 
-impl<'p, T> PixelIterExt<Pixel> for T where T: Iterator<Item = Pixel> {}
-impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
-impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
+// impl<'p, T> PixelIterExt<Pixel> for T where T: Iterator<Item = Pixel> {}
+// impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
+// impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
+
+impl<'p, T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = P> {}
 
 /// A set of extension methods for a mutable only iterator over [`Pixel`]s.
 pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
@@ -184,4 +186,4 @@ pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
     }
 }
 
-impl<'p, T> PixelIterMutExt<'p, &'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
+impl<'p, T, P: PixelMutInterface> PixelIterMutExt<'p, P> for T where T: Iterator<Item = P> {}

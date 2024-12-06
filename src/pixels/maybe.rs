@@ -5,8 +5,7 @@ use super::{
     },
     color::PixelColor,
     position::{PixelPosition, PixelStrictPositionInterface},
-    PixelInitializer, PixelInterface, PixelIterExt, PixelIterMutExt, PixelMutInterface,
-    PixelMutPosition,
+    PixelInitializer, PixelInterface, PixelMutInterface, PixelMutPosition,
 };
 
 /// A pixel that may not have any effect on the color at this position.
@@ -93,14 +92,14 @@ impl PixelInterface for &mut MaybePixel {
     }
 }
 
-impl<'p, T> PixelIterExt<MaybePixel> for T where T: Iterator<Item = MaybePixel> {}
-impl<'p, T> PixelIterExt<&'p MaybePixel> for T where T: Iterator<Item = &'p MaybePixel> {}
-impl<'p, T> PixelIterExt<&'p mut MaybePixel> for T where T: Iterator<Item = &'p mut MaybePixel> {}
+// impl<'p, T> PixelIterExt<MaybePixel> for T where T: Iterator<Item = MaybePixel> {}
+// impl<'p, T> PixelIterExt<&'p MaybePixel> for T where T: Iterator<Item = &'p MaybePixel> {}
+// impl<'p, T> PixelIterExt<&'p mut MaybePixel> for T where T: Iterator<Item = &'p mut MaybePixel> {}
 
-impl<'p, T> PixelIterMutExt<'p, &'p mut MaybePixel> for T where
-    T: Iterator<Item = &'p mut MaybePixel>
-{
-}
+// impl<'p, T> PixelIterMutExt<'p, &'p mut MaybePixel> for T where
+//     T: Iterator<Item = &'p mut MaybePixel>
+// {
+// }
 
 /// Extensions for any type that implements [`PixelCanvasInterface`].
 ///

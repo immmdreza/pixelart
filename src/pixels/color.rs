@@ -2,6 +2,34 @@ use std::fmt::Display;
 
 use image::{Rgb, Rgba};
 
+pub mod colors {
+    use super::PixelColor;
+
+    /// Color **White**.
+    pub const WHITE: PixelColor = PixelColor::splat(u8::MAX);
+
+    /// Color **Black**.
+    pub const BLACK: PixelColor = PixelColor::splat(u8::MIN);
+
+    /// Color **Red**.
+    pub const RED: PixelColor = PixelColor::from_red(u8::MAX);
+
+    /// Color **Green**.
+    pub const GREEN: PixelColor = PixelColor::from_green(u8::MAX);
+
+    /// Color **Blue**.
+    pub const BLUE: PixelColor = PixelColor::from_blue(u8::MAX);
+
+    /// Color **Yellow**.
+    pub const YELLOW: PixelColor = PixelColor::from_red(u8::MAX).green(u8::MAX);
+
+    /// Color **Cyan**.
+    pub const CYAN: PixelColor = PixelColor::from_green(u8::MAX).blue(u8::MAX);
+
+    /// Color **Magenta**.
+    pub const MAGENTA: PixelColor = PixelColor::from_red(u8::MAX).blue(u8::MAX);
+}
+
 pub trait RgbaInterface {
     fn rgba(&self) -> Rgba<u8>;
 }
