@@ -16,6 +16,9 @@ use crate::pixels::{
     PixelInterface,
 };
 
+#[cfg(feature = "viewer")]
+use crate::viewer::ViewResult;
+
 /// Styles use by [`PixelImageBuilder`].
 #[derive(Debug, Clone)]
 pub struct PixelImageStyle {
@@ -205,6 +208,18 @@ where
     {
         let image = self.get_image();
         image.save(path)
+    }
+
+    #[cfg(feature = "viewer")]
+    /// View the image inside a window.
+    pub fn view<'p>(&self) -> ViewResult
+    where
+        'c: 'p,
+        P: 'p,
+        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+    {
+        let image = self.get_image();
+        crate::viewer::view(image)
     }
 }
 

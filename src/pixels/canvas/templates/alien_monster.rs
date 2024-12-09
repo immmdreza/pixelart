@@ -95,4 +95,16 @@ mod tests {
             .save("arts/alien_monster.png")
             .unwrap();
     }
+
+    #[test]
+    fn monster_square() {
+        let mut canvas = MaybePixelCanvas::<20, 20>::default();
+        canvas.draw((1, 0), AlienMonster);
+
+        canvas
+            .default_image_builder()
+            .with_scale(2)
+            .save("arts/alien_monster_square.png")
+            .unwrap();
+    }
 }

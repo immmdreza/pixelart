@@ -202,7 +202,7 @@ pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface
     }
 
     /// Gets the color of a pixel at given position.
-    fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &P::ColorType
+    fn color_at<'a>(&'a self, pos: impl PixelStrictPositionInterface<H, W>) -> &'a P::ColorType
     where
         P: 'a,
     {

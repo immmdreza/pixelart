@@ -8,3 +8,6 @@ pub use crate::pixels::{
     position::{strict::*, PixelPositionInterface as _, StrictPositions},
     Pixel, PixelInterface as _, PixelIterExt as _, PixelIterMutExt as _, PixelMutInterface as _,
 };
+
+#[cfg(feature = "viewer")]
+pub use crate::viewer::ViewResult;

@@ -41,6 +41,9 @@ pub mod image;
 pub mod pixels;
 pub mod prelude;
 
+#[cfg(feature = "viewer")]
+pub mod viewer;
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
