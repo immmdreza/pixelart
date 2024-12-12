@@ -37,6 +37,7 @@ fn main() {
 You can do many other things after you discovered them!
 */
 
+pub mod animation;
 pub mod image;
 pub mod pixels;
 pub mod prelude;
@@ -58,8 +59,8 @@ mod tests {
 
         assert_eq!(canvas[pos].color(), &WHITE);
 
-        let _part = canvas.partition(TOP_LEFT, BOTTOM_RIGHT);
-        let _part_mut = canvas.partition_mut(TOP_LEFT, BOTTOM_RIGHT);
+        // let _part = canvas.partition(TOP_LEFT, BOTTOM_RIGHT);
+        // let _part_mut = canvas.partition_mut(TOP_LEFT, BOTTOM_RIGHT);
 
         // Update color of a pixel.
         let prev_color = canvas[pos].update_color(BLACK);

@@ -2,16 +2,15 @@ use std::marker::PhantomData;
 
 use crate::{
     pixels::{
-        position::{
-            IntoPixelStrictPosition, PixelPositionInterface, PixelStrictPosition,
-            PixelStrictPositionInterface,
-        },
-        Pixel, PixelInterface, PixelMutInterface,
+        position::{IntoPixelStrictPosition, PixelStrictPosition, PixelStrictPositionInterface},
+        PixelInitializer, PixelInterface, PixelMutInterface,
     },
     prelude::{Drawable, MaybePixel},
 };
 
-use super::{drawable::draw_canvas_on, PixelCanvasInterface, PixelCanvasMutInterface};
+use super::{
+    table::PixelTable, PixelCanvasInterface, PixelCanvasMutInterface, SharedMutPixelCanvasExt,
+};
 
 #[derive(Debug, Clone)]
 pub struct BoxIndicator<const H: usize, const W: usize = H> {
@@ -78,95 +77,264 @@ impl<const H: usize, const W: usize> Iterator for BoxIndicatorIter<H, W> {
 }
 
 pub struct CanvasPartition<
-    const H: usize,
-    const W: usize,
-    P: PixelInterface,
-    I: PixelCanvasInterface<H, W, P>,
-> {
-    table: I,
-    positions: Vec<PixelStrictPosition<H, W>>,
-    _phantom: PhantomData<P>,
+    const MH: usize,
+    const MW: usize,
+    const SH: usize,
+    const SW: usize,
+    I,
+    SP,
+    MP = MaybePixel,
+> where
+    I: PixelCanvasInterface<SH, SW, SP>,
+    SP: PixelInterface,
+    MP: PixelInterface,
+{
+    position: PixelStrictPosition<SH, SW>,
+    source_table: I,
+    partition_table: PixelTable<MH, MW, MP>,
+    _phantom: PhantomData<SP>,
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface, I: PixelCanvasInterface<H, W, P>>
-    PixelCanvasInterface<H, W, P> for CanvasPartition<H, W, P, I>
+impl<
+        const MH: usize,
+        const MW: usize,
+        const SH: usize,
+        const SW: usize,
+        SP: PixelInterface,
+        MP: PixelInterface,
+        I: PixelCanvasInterface<SH, SW, SP>,
+    > Drawable<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+where
+    MP::ColorType: Clone,
 {
-    fn table(&self) -> &super::table::PixelTable<H, W, P> {
-        self.table.table()
+    fn draw_on<const HC: usize, const WC: usize, P, C>(
+        &self,
+        start_pos: impl IntoPixelStrictPosition<HC, WC>,
+        canvas: &mut C,
+    ) where
+        P: PixelMutInterface,
+        C: PixelCanvasMutInterface<HC, WC, P>,
+        P::ColorType: From<<MP as PixelInterface>::ColorType>,
+    {
+        for (my_position, source_position) in
+            Self::_included_positions::<MH, MW, HC, WC>(start_pos.into_pixel_strict_position())
+        {
+            let my_color = self.partition_table[my_position].color().clone();
+            canvas.table_mut()[source_position].update_color(my_color);
+        }
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelMutInterface, I: PixelCanvasMutInterface<H, W, P>>
-    PixelCanvasMutInterface<H, W, P> for CanvasPartition<H, W, P, I>
+impl<
+        const SH: usize,
+        const SW: usize,
+        const MH: usize,
+        const MW: usize,
+        SP: PixelInterface,
+        MP: PixelInterface + PixelMutInterface,
+        I: PixelCanvasInterface<SH, SW, SP>,
+    > PixelCanvasMutInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 {
-    fn table_mut(&mut self) -> &mut super::table::PixelTable<H, W, P> {
-        self.table.table_mut()
+    fn table_mut(&mut self) -> &mut PixelTable<MH, MW, MP> {
+        &mut self.partition_table
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface, I: PixelCanvasInterface<H, W, P>>
-    CanvasPartition<H, W, P, I>
+impl<
+        const SH: usize,
+        const SW: usize,
+        const MH: usize,
+        const MW: usize,
+        SP: PixelInterface,
+        MP: PixelInterface,
+        I: PixelCanvasInterface<SH, SW, SP>,
+    > PixelCanvasInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 {
+    fn table(&self) -> &PixelTable<MH, MW, MP> {
+        &self.partition_table
+    }
+}
+
+impl<
+        const SH: usize,
+        const SW: usize,
+        const MH: usize,
+        const MW: usize,
+        SP: PixelInterface,
+        MP: PixelInterface,
+        I: PixelCanvasInterface<SH, SW, SP>,
+    > CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+{
+    fn _included_positions<
+        const MMH: usize,
+        const MMW: usize,
+        const SSH: usize,
+        const SSW: usize,
+    >(
+        start_position: PixelStrictPosition<SSH, SSW>,
+    ) -> impl Iterator<Item = (PixelStrictPosition<MMH, MMW>, PixelStrictPosition<SSH, SSW>)> {
+        let result = (0..MMH)
+            .into_iter()
+            .map(move |row_offset| {
+                (0..MMW).into_iter().filter_map(move |column_offset| {
+                    start_position
+                        .checked_right(row_offset)
+                        .ok()
+                        .map(|f| f.checked_down(column_offset).ok())
+                        .flatten()
+                        .map(|f| {
+                            (
+                                PixelStrictPosition::<MMH, MMW>::new(row_offset, column_offset)
+                                    .unwrap(),
+                                f,
+                            )
+                        })
+                })
+            })
+            .flatten();
+        result
+    }
+
+    fn _read_source<const MMH: usize, const MMW: usize>(
+        source_table: &I,
+        position: PixelStrictPosition<SH, SW>,
+    ) -> PixelTable<MMH, MMW, MP>
+    where
+        MP: PixelMutInterface + PixelInitializer,
+        MP::ColorType: Clone + Default,
+        SP::ColorType: Clone,
+        MP::ColorType: From<SP::ColorType>,
+    {
+        let mut partition_table = PixelTable::<MMH, MMW, MP>::default();
+        for (my_position, source_position) in Self::_included_positions(position) {
+            let source_color = source_table.table()[source_position].color().clone();
+            partition_table[my_position].update_color(source_color);
+        }
+        partition_table
+    }
+
+    fn read_source(&mut self) -> PixelTable<MH, MW, MP>
+    where
+        MP: PixelMutInterface + PixelInitializer,
+        MP::ColorType: Clone + Default,
+        SP::ColorType: Clone,
+        MP::ColorType: From<SP::ColorType>,
+    {
+        Self::_read_source(&self.source_table, self.position)
+    }
+
+    fn clear_source(&mut self)
+    where
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: Default,
+    {
+        for (_, source_position) in self.included_positions() {
+            self.source_table.table_mut()[source_position].update_color(SP::ColorType::default());
+        }
+    }
+
+    fn write_source(&mut self)
+    where
+        MP::ColorType: Clone,
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: From<MP::ColorType>,
+    {
+        for (my_position, source_position) in self.included_positions() {
+            if self.partition_table[my_position].has_color() {
+                let my_color = self.partition_table[my_position].color().clone();
+                self.source_table.table_mut()[source_position].update_color(my_color);
+            }
+        }
+    }
+
     pub fn new(
-        table: I,
-        positions: impl IntoIterator<Item = impl IntoPixelStrictPosition<H, W>>,
-    ) -> Self {
-        Self {
-            table,
-            positions: positions
-                .into_iter()
-                .map(|f| f.into_pixel_strict_position())
-                .collect(),
+        position: impl IntoPixelStrictPosition<SH, SW>,
+        source_table: I,
+    ) -> CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+    where
+        MP: PixelMutInterface + PixelInitializer,
+        MP::ColorType: Clone + Default,
+        SP::ColorType: Clone,
+        MP::ColorType: From<SP::ColorType>,
+    {
+        let start_position = position.into_pixel_strict_position();
+        CanvasPartition::<MH, MW, SH, SW, I, SP, MP> {
+            partition_table: Self::_read_source(&source_table, start_position),
+            position: start_position,
+            source_table,
             _phantom: PhantomData,
         }
     }
-}
 
-impl<const H: usize, const W: usize, P: PixelMutInterface, I: PixelCanvasMutInterface<H, W, P>>
-    CanvasPartition<H, W, P, I>
-{
-    pub fn update_color(&mut self, color: impl Into<P::ColorType> + Clone) {
-        for pixel in self.table.table_mut().iter_pixels_mut().filter(|p| {
-            self.positions.iter().any(|q| {
-                let pos = p.position();
-                pos.row() == q.row() && pos.column() == q.column()
-            })
-        }) {
-            pixel.update_color(color.clone());
-        }
-    }
-}
-
-// Make partition drawable
-impl<const H: usize, const W: usize, I: PixelCanvasInterface<H, W, MaybePixel>> Drawable<H, W>
-    for CanvasPartition<H, W, MaybePixel, I>
-{
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    pub fn included_positions(
         &self,
-        start_pos: impl IntoPixelStrictPosition<HC, WC>,
-        canvas: &mut C,
-    ) where
-        P: PixelMutInterface,
-        C: PixelCanvasMutInterface<HC, WC, P>,
-        <P as PixelInterface>::ColorType: From<crate::prelude::PixelColor>,
-    {
-        self.table().draw_on(start_pos, canvas);
+    ) -> impl Iterator<Item = (PixelStrictPosition<MH, MW>, PixelStrictPosition<SH, SW>)> {
+        Self::_included_positions(self.position)
     }
-}
 
-impl<const H: usize, const W: usize, I: PixelCanvasInterface<H, W, Pixel>> Drawable<H, W>
-    for CanvasPartition<H, W, Pixel, I>
-{
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
-        &self,
-        start_pos: impl IntoPixelStrictPosition<HC, WC>,
-        canvas: &mut C,
-    ) where
-        P: PixelMutInterface,
-        C: PixelCanvasMutInterface<HC, WC, P>,
-        <P as PixelInterface>::ColorType: From<crate::prelude::PixelColor>,
+    pub fn update_position(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
+    where
+        MP: PixelMutInterface + PixelInitializer,
+        MP::ColorType: Clone + Default,
+        SP::ColorType: Clone,
+        MP::ColorType: From<SP::ColorType>,
     {
-        draw_canvas_on(self.table(), start_pos, canvas)
+        self.position = new_position.into_pixel_strict_position();
+        self.read_source();
+    }
+
+    pub fn update_color(&mut self, color: impl Into<MP::ColorType> + Clone)
+    where
+        MP: PixelMutInterface,
+        MP::ColorType: Clone,
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: From<MP::ColorType>,
+    {
+        SharedMutPixelCanvasExt::fill(self, color);
+        self.write_source();
+    }
+
+    /// .
+    pub fn crop_to(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
+    where
+        MP::ColorType: Clone,
+        SP::ColorType: Clone + Default,
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: From<MP::ColorType>,
+    {
+        self.clear_source();
+        self.position = new_position.into_pixel_strict_position();
+        self.write_source();
+    }
+
+    /// .
+    pub fn copy_to(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
+    where
+        MP::ColorType: Clone,
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: From<MP::ColorType>,
+    {
+        self.position = new_position.into_pixel_strict_position();
+        self.write_source();
+    }
+
+    /// Returns a mutable reference to the partition table of this [`CanvasPartition<SH, SW, MH, MW, I, SP, MP>`].
+    pub fn partition_table_mut(&mut self) -> &mut PixelTable<MH, MW, MP> {
+        &mut self.partition_table
+    }
+
+    /// Returns a reference to the partition table of this [`CanvasPartition<SH, SW, MH, MW, I, SP, MP>`].
+    pub fn partition_table(&self) -> &PixelTable<MH, MW, MP> {
+        &self.partition_table
+    }
+
+    pub fn source_table(&self) -> &I {
+        &self.source_table
     }
 }
 
@@ -174,23 +342,70 @@ impl<const H: usize, const W: usize, I: PixelCanvasInterface<H, W, Pixel>> Drawa
 mod tests {
     use crate::prelude::*;
 
+    use super::CanvasPartition;
+
     #[test]
-    fn test_name() {
+    fn feature_1() {
         let mut canvas = PixelCanvas::<5>::default();
+        let mut part = CanvasPartition::<2, 2, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
 
-        let mut partition = canvas.partition_mut(TOP_LEFT, CENTER);
+        part.update_color(RED);
 
-        partition.update_color(RED);
-
-        let mut other_canvas = PixelCanvas::<5>::default();
-
-        // Copy from canvas Paste on other_canvas
-        partition.draw_on(CENTER, &mut other_canvas);
-
-        other_canvas
+        canvas
             .default_image_builder()
             .with_scale(5)
-            .save("arts/partition.png")
-            .unwrap();
+            .save("arts/partition_0.png")
+            .unwrap()
+    }
+
+    #[test]
+    fn feature_2() {
+        let mut canvas = PixelCanvas::<5>::default();
+        let mut part = CanvasPartition::<2, 2, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
+
+        part.update_color(RED);
+
+        part.crop_to(TOP_CENTER);
+
+        canvas
+            .default_image_builder()
+            .with_scale(5)
+            .save("arts/partition_crop.png")
+            .unwrap()
+    }
+
+    #[test]
+    fn feature_3() {
+        let mut canvas = PixelCanvas::<5>::default();
+        let mut part = CanvasPartition::<2, 2, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
+
+        part.update_color(RED);
+
+        part.copy_to(TOP_CENTER);
+        part.copy_to(CENTER);
+
+        canvas
+            .default_image_builder()
+            .with_scale(5)
+            .save("arts/partition_crop_1.png")
+            .unwrap()
+    }
+
+    #[test]
+    fn feature_4() {
+        let mut canvas = PixelCanvas::<5>::default();
+        let mut part = CanvasPartition::<2, 2, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
+
+        part.update_color(RED);
+
+        let mut canvas2 = PixelCanvas::<5>::default();
+
+        part.draw_on(LEFT_CENTER, &mut canvas2);
+
+        canvas2
+            .default_image_builder()
+            .with_scale(5)
+            .save("arts/partition_crop_2.png")
+            .unwrap()
     }
 }

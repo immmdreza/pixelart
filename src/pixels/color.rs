@@ -222,6 +222,12 @@ where
     }
 }
 
+impl From<Option<PixelColor>> for PixelColor {
+    fn from(color: Option<PixelColor>) -> Self {
+        color.expect("There's no color here!")
+    }
+}
+
 impl From<(u8, u8, u8)> for PixelColor {
     fn from((r, g, b): (u8, u8, u8)) -> Self {
         PixelColor { r, g, b }

@@ -1,6 +1,6 @@
 //! Module contains types related to a [`PixelCanvas`].
 
-use partition::{BoxIndicator, CanvasPartition};
+use partition::CanvasPartition;
 
 use crate::image::{PixelImageBuilder, PixelImageStyle};
 
@@ -208,18 +208,6 @@ pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface
     {
         self.table()[pos].color()
     }
-
-    fn partition<'a>(
-        &'a self,
-        top_left: impl IntoPixelStrictPosition<H, W>,
-        bottom_right: impl IntoPixelStrictPosition<H, W>,
-    ) -> CanvasPartition<H, W, P, &'a Self>
-    where
-        Self: Sized,
-        &'a Self: PixelCanvasInterface<H, W, P>,
-    {
-        CanvasPartition::new(self, BoxIndicator::new(top_left, bottom_right))
-    }
 }
 
 impl<const H: usize, const W: usize, T, P: PixelInterface> SharedPixelCanvasExt<H, W, P> for T where
@@ -273,32 +261,35 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         _fill_inside::<H, W, P, _>(self, None, color, point_inside)
     }
 
-    fn draw<const HD: usize, const WD: usize>(
+    fn draw<const HD: usize, const WD: usize, MP: PixelInterface>(
         &mut self,
         start_pos: impl IntoPixelStrictPosition<H, W>,
-        drawable: impl Drawable<HD, WD>,
+        drawable: impl Drawable<HD, WD, MP>,
     ) where
         Self: Sized,
-        <P as PixelInterface>::ColorType: From<PixelColor>,
+        <MP as PixelInterface>::ColorType: Clone,
+        P::ColorType: From<MP::ColorType>,
     {
         drawable.draw_on(start_pos, self)
     }
 
-    fn draw_exact(
+    fn draw_exact<MP: PixelInterface>(
         &mut self,
         start_pos: impl IntoPixelStrictPosition<H, W>,
-        drawable: impl Drawable<H, W>,
+        drawable: impl Drawable<H, W, MP>,
     ) where
         Self: Sized,
-        <P as PixelInterface>::ColorType: From<PixelColor>,
+        <MP as PixelInterface>::ColorType: Clone,
+        P::ColorType: From<MP::ColorType>,
     {
         drawable.draw_on_exact(start_pos, self)
     }
 
-    fn draw_exact_abs(&mut self, drawable: impl Drawable<H, W>)
+    fn draw_exact_abs<MP: PixelInterface>(&mut self, drawable: impl Drawable<H, W, MP>)
     where
         Self: Sized,
-        <P as PixelInterface>::ColorType: From<PixelColor>,
+        <MP as PixelInterface>::ColorType: Clone,
+        <P as PixelInterface>::ColorType: From<<MP as PixelInterface>::ColorType>,
     {
         drawable.draw_on_exact_abs(self)
     }
@@ -316,17 +307,17 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         pen.attach(self, start_pos)
     }
 
-    fn partition_mut<'a>(
-        &'a mut self,
-        top_left: impl IntoPixelStrictPosition<H, W>,
-        bottom_right: impl IntoPixelStrictPosition<H, W>,
-    ) -> CanvasPartition<H, W, P, &'a mut Self>
-    where
-        Self: Sized,
-        &'a mut Self: PixelCanvasInterface<H, W, P>,
-    {
-        CanvasPartition::new(self, BoxIndicator::new(top_left, bottom_right))
-    }
+    // fn partition_mut<'a, const MH: usize, const MW: usize>(
+    //     &'a mut self,
+    //     top_left: impl IntoPixelStrictPosition<H, W>,
+    // ) -> CanvasPartition<H, W, MH, MW, P, _, Self>
+    // where
+    //     Self: Sized,
+    //     &'a Self: PixelCanvasInterface<H, W, P>,
+    //     <P as PixelInterface>::ColorType: Clone,
+    // {
+    //     CanvasPartition::new(top_left, self)
+    // }
 }
 
 impl<const H: usize, const W: usize, T, P: PixelMutInterface> SharedMutPixelCanvasExt<H, W, P> for T where

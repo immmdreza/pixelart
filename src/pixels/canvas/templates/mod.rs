@@ -4,6 +4,7 @@ use crate::pixels::{
     color::IntoPixelColor,
     maybe::MaybePixel,
     position::{PixelStrictPositionInterface, StrictPositions},
+    PixelInterface,
 };
 
 use super::{drawable::Drawable, PixelCanvas, PixelCanvasMutInterface, SharedMutPixelCanvasExt};
@@ -22,7 +23,7 @@ pub trait Template<const H: usize, const W: usize> {
     }
 }
 
-impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W> for T {
+impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W, MaybePixel> for T {
     fn draw_on<const HC: usize, const WC: usize, P, C>(
         &self,
         start_pos: impl crate::pixels::position::IntoPixelStrictPosition<HC, WC>,
@@ -30,10 +31,10 @@ impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W> for T {
     ) where
         P: crate::pixels::PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        <P as crate::pixels::PixelInterface>::ColorType: From<crate::prelude::PixelColor>,
+        P::ColorType: From<<MaybePixel as PixelInterface>::ColorType>,
     {
         let template = self.create();
-        canvas.draw(start_pos, template)
+        canvas.draw(start_pos, template);
     }
 }
 

@@ -219,7 +219,21 @@ where
         &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
     {
         let image = self.get_image();
-        crate::viewer::view(image)
+        crate::viewer::view([image])
+    }
+
+    #[cfg(feature = "viewer")]
+    /// View the image inside a window.
+    pub fn view_with_others<'p, T>(&self, others: T) -> ViewResult
+    where
+        'c: 'p,
+        P: 'p,
+        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>,
+    {
+        let image = self.get_image();
+        let images: Vec<_> = [image].into_iter().chain(others.into_iter()).collect();
+        crate::viewer::view(images)
     }
 }
 
