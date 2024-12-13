@@ -85,9 +85,9 @@ pub struct CanvasPartition<
     SP,
     MP = MaybePixel,
 > where
-    I: PixelCanvasInterface<SH, SW, SP>,
     SP: PixelInterface,
     MP: PixelInterface,
+    I: PixelCanvasInterface<SH, SW, SP>,
 {
     position: PixelStrictPosition<SH, SW>,
     source_table: I,
@@ -95,17 +95,13 @@ pub struct CanvasPartition<
     _phantom: PhantomData<SP>,
 }
 
-impl<
-        const MH: usize,
-        const MW: usize,
-        const SH: usize,
-        const SW: usize,
-        SP: PixelInterface,
-        MP: PixelInterface,
-        I: PixelCanvasInterface<SH, SW, SP>,
-    > Drawable<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+impl<const MH: usize, const MW: usize, const SH: usize, const SW: usize, SP, MP, I>
+    Drawable<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 where
     MP::ColorType: Clone,
+    SP: PixelInterface,
+    MP: PixelInterface,
+    I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn draw_on<const HC: usize, const WC: usize, P, C>(
         &self,
@@ -125,45 +121,36 @@ where
     }
 }
 
-impl<
-        const SH: usize,
-        const SW: usize,
-        const MH: usize,
-        const MW: usize,
-        SP: PixelInterface,
-        MP: PixelInterface + PixelMutInterface,
-        I: PixelCanvasInterface<SH, SW, SP>,
-    > PixelCanvasMutInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
+    PixelCanvasMutInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+where
+    SP: PixelInterface,
+    MP: PixelInterface + PixelMutInterface,
+    I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn table_mut(&mut self) -> &mut PixelTable<MH, MW, MP> {
         &mut self.partition_table
     }
 }
 
-impl<
-        const SH: usize,
-        const SW: usize,
-        const MH: usize,
-        const MW: usize,
-        SP: PixelInterface,
-        MP: PixelInterface,
-        I: PixelCanvasInterface<SH, SW, SP>,
-    > PixelCanvasInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
+    PixelCanvasInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+where
+    SP: PixelInterface,
+    MP: PixelInterface,
+    I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn table(&self) -> &PixelTable<MH, MW, MP> {
         &self.partition_table
     }
 }
 
-impl<
-        const SH: usize,
-        const SW: usize,
-        const MH: usize,
-        const MW: usize,
-        SP: PixelInterface,
-        MP: PixelInterface,
-        I: PixelCanvasInterface<SH, SW, SP>,
-    > CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
+    CanvasPartition<MH, MW, SH, SW, I, SP, MP>
+where
+    SP: PixelInterface,
+    MP: PixelInterface,
+    I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn _included_positions<
         const MMH: usize,
@@ -255,9 +242,8 @@ impl<
     ) -> CanvasPartition<MH, MW, SH, SW, I, SP, MP>
     where
         MP: PixelMutInterface + PixelInitializer,
-        MP::ColorType: Clone + Default,
+        MP::ColorType: Clone + Default + From<SP::ColorType>,
         SP::ColorType: Clone,
-        MP::ColorType: From<SP::ColorType>,
     {
         let start_position = position.into_pixel_strict_position();
         CanvasPartition::<MH, MW, SH, SW, I, SP, MP> {
@@ -347,7 +333,8 @@ mod tests {
     #[test]
     fn feature_1() {
         let mut canvas = PixelCanvas::<5>::default();
-        let mut part = CanvasPartition::<2, 2, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
+        // Captures a 2x2 partition from top left of the canvas
+        let mut part = canvas.maybe_partition_mut::<2, 2>(TOP_LEFT);
 
         part.update_color(RED);
 

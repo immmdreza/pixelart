@@ -208,6 +208,49 @@ pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface
     {
         self.table()[pos].color()
     }
+
+    fn any_partition<'a, const MH: usize, const MW: usize, MP: PixelInterface>(
+        &'a self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a Self, P, MP>
+    where
+        Self: Sized,
+        &'a Self: PixelCanvasInterface<H, W, P>,
+        MP: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+        <MP as PixelInterface>::ColorType: Clone,
+        <MP as PixelInterface>::ColorType: std::default::Default,
+        <MP as PixelInterface>::ColorType: From<<P as PixelInterface>::ColorType>,
+    {
+        CanvasPartition::<MH, MW, H, W, &Self, P, MP>::new(top_left, self)
+    }
+
+    fn partition<'a, const MH: usize, const MW: usize>(
+        &'a self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a Self, P, P>
+    where
+        Self: Sized,
+        &'a Self: PixelCanvasInterface<H, W, P>,
+        P: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+    {
+        self.any_partition::<MH, MW, P>(top_left)
+    }
+
+    fn maybe_partition<'a, const MH: usize, const MW: usize>(
+        &'a self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a Self, P, MaybePixel>
+    where
+        Self: Sized,
+        &'a Self: PixelCanvasInterface<H, W, P>,
+        P: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+        Option<PixelColor>: From<P::ColorType>,
+    {
+        self.any_partition::<MH, MW, MaybePixel>(top_left)
+    }
 }
 
 impl<const H: usize, const W: usize, T, P: PixelInterface> SharedPixelCanvasExt<H, W, P> for T where
@@ -221,44 +264,25 @@ impl<const H: usize, const W: usize, T, P: PixelInterface> SharedPixelCanvasExt<
 pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInterface>:
     PixelCanvasMutInterface<H, W, P>
 {
+    fn attach_new_pen(
+        &mut self,
+        color: impl Into<P::ColorType>,
+        start_pos: impl IntoPixelStrictPosition<H, W>,
+    ) -> Pen<pen::CanvasAttachedMarker<H, W, P, Self>>
+    where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: From<PixelColor>,
+    {
+        let pen = Pen::new(color);
+        pen.attach(self, start_pos)
+    }
+
     /// Updates every pixel's color to default which is white.
     fn clear(&mut self)
     where
         <P as PixelInterface>::ColorType: Default + Clone,
     {
         self.fill(P::ColorType::default())
-    }
-
-    /// Fills all pixels color.
-    fn fill(&mut self, color: impl Into<P::ColorType>)
-    where
-        <P as PixelInterface>::ColorType: Clone,
-    {
-        let color = color.into();
-        self.table_mut().for_each_pixel_mut(|pixel| {
-            pixel.update_color(color.clone());
-        })
-    }
-
-    /// Update color of a pixel at the given position.
-    fn update_color_at(
-        &mut self,
-        pos: impl PixelStrictPositionInterface<H, W>,
-        color: impl Into<P::ColorType>,
-    ) -> P::ColorType {
-        self.table_mut()[pos].update_color(color)
-    }
-
-    /// Keep filling pixels with new color until we encounter a new color.
-    fn fill_inside(
-        &mut self,
-        color: impl Into<P::ColorType> + std::clone::Clone,
-        point_inside: impl IntoPixelStrictPosition<H, W>,
-    ) where
-        Self: Sized,
-        <P as PixelInterface>::ColorType: PartialEq + Clone,
-    {
-        _fill_inside::<H, W, P, _>(self, None, color, point_inside)
     }
 
     fn draw<const HD: usize, const WD: usize, MP: PixelInterface>(
@@ -294,30 +318,80 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         drawable.draw_on_exact_abs(self)
     }
 
-    fn attach_new_pen(
-        &mut self,
-        color: impl Into<P::ColorType>,
-        start_pos: impl IntoPixelStrictPosition<H, W>,
-    ) -> Pen<pen::CanvasAttachedMarker<H, W, P, Self>>
+    /// Fills all pixels color.
+    fn fill(&mut self, color: impl Into<P::ColorType>)
     where
-        Self: Sized,
-        <P as PixelInterface>::ColorType: From<PixelColor>,
+        <P as PixelInterface>::ColorType: Clone,
     {
-        let pen = Pen::new(color);
-        pen.attach(self, start_pos)
+        let color = color.into();
+        self.table_mut().for_each_pixel_mut(|pixel| {
+            pixel.update_color(color.clone());
+        })
     }
 
-    // fn partition_mut<'a, const MH: usize, const MW: usize>(
-    //     &'a mut self,
-    //     top_left: impl IntoPixelStrictPosition<H, W>,
-    // ) -> CanvasPartition<H, W, MH, MW, P, _, Self>
-    // where
-    //     Self: Sized,
-    //     &'a Self: PixelCanvasInterface<H, W, P>,
-    //     <P as PixelInterface>::ColorType: Clone,
-    // {
-    //     CanvasPartition::new(top_left, self)
-    // }
+    /// Keep filling pixels with new color until we encounter a new color.
+    fn fill_inside(
+        &mut self,
+        color: impl Into<P::ColorType> + std::clone::Clone,
+        point_inside: impl IntoPixelStrictPosition<H, W>,
+    ) where
+        Self: Sized,
+        <P as PixelInterface>::ColorType: PartialEq + Clone,
+    {
+        _fill_inside::<H, W, P, _>(self, None, color, point_inside)
+    }
+
+    /// Update color of a pixel at the given position.
+    fn update_color_at(
+        &mut self,
+        pos: impl PixelStrictPositionInterface<H, W>,
+        color: impl Into<P::ColorType>,
+    ) -> P::ColorType {
+        self.table_mut()[pos].update_color(color)
+    }
+
+    fn any_partition_mut<'a, const MH: usize, const MW: usize, MP: PixelInterface>(
+        &'a mut self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a mut Self, P, MP>
+    where
+        Self: Sized,
+        &'a mut Self: PixelCanvasInterface<H, W, P>,
+        MP: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+        <MP as PixelInterface>::ColorType: Clone,
+        <MP as PixelInterface>::ColorType: std::default::Default,
+        <MP as PixelInterface>::ColorType: From<<P as PixelInterface>::ColorType>,
+    {
+        CanvasPartition::<MH, MW, H, W, &mut Self, P, MP>::new(top_left, self)
+    }
+
+    fn partition_mut<'a, const MH: usize, const MW: usize>(
+        &'a mut self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a mut Self, P, P>
+    where
+        Self: Sized,
+        &'a mut Self: PixelCanvasInterface<H, W, P>,
+        P: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+    {
+        self.any_partition_mut::<MH, MW, P>(top_left)
+    }
+
+    fn maybe_partition_mut<'a, const MH: usize, const MW: usize>(
+        &'a mut self,
+        top_left: impl IntoPixelStrictPosition<H, W>,
+    ) -> CanvasPartition<MH, MW, H, W, &'a mut Self, P, MaybePixel>
+    where
+        Self: Sized,
+        &'a mut Self: PixelCanvasInterface<H, W, P>,
+        P: PixelMutInterface + PixelInitializer,
+        P::ColorType: Clone + Default,
+        Option<PixelColor>: From<P::ColorType>,
+    {
+        self.any_partition_mut::<MH, MW, MaybePixel>(top_left)
+    }
 }
 
 impl<const H: usize, const W: usize, T, P: PixelMutInterface> SharedMutPixelCanvasExt<H, W, P> for T where

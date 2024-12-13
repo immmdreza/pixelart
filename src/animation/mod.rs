@@ -62,7 +62,7 @@ impl PixelAnimationBuilder {
 
 #[cfg(test)]
 mod tests {
-    use crate::{pixels::canvas::partition::CanvasPartition, prelude::*};
+    use crate::prelude::*;
 
     use super::*;
 
@@ -71,9 +71,10 @@ mod tests {
         let mut canvas = PixelCanvas::<5>::default();
         let mut builder = PixelAnimationBuilder::new(Repeat::Infinite, 5, []);
 
-        let mut part = CanvasPartition::<1, 1, 5, 5, _, _, MaybePixel>::new(TOP_LEFT, &mut canvas);
+        // Basically a point (1x1).
+        let mut part = canvas.partition_mut::<1, 1>(TOP_LEFT);
 
-        part.update_color(RED);
+        part.update_color(BLUE);
 
         builder.push_frame_from_canvas(part.source_table());
 

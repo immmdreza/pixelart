@@ -38,6 +38,7 @@ You can do many other things after you discovered them!
 */
 
 pub mod animation;
+pub mod growth;
 pub mod image;
 pub mod pixels;
 pub mod prelude;

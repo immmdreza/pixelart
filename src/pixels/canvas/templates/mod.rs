@@ -51,7 +51,7 @@ pub fn horizontal_line<const W: usize>(
 }
 
 /// Bordered `H`  * `W` square.
-pub fn square<const H: usize, const W: usize>(
+pub fn rectangle<const H: usize, const W: usize>(
     color: impl IntoPixelColor + Clone,
 ) -> PixelCanvas<H, W, MaybePixel> {
     let mut table = PixelCanvas::<H, W, MaybePixel>::default();
@@ -71,6 +71,10 @@ pub fn square<const H: usize, const W: usize>(
     table
 }
 
+pub fn square<const H: usize>(color: impl IntoPixelColor + Clone) -> PixelCanvas<H, H, MaybePixel> {
+    rectangle::<H, H>(color)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::pixels::{
@@ -83,7 +87,7 @@ mod tests {
     #[test]
     fn test_name() {
         let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
-        canvas.draw_exact_abs(square(PixelColor::BLACK));
+        canvas.draw_exact_abs(rectangle(PixelColor::BLACK));
 
         canvas.fill_inside(PixelColor::GREEN, StrictPositions::Center);
 
