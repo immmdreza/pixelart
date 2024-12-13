@@ -5,8 +5,21 @@ use image::{
     Frame, ImageBuffer, ImageResult, Rgba,
 };
 
-use crate::pixels::{canvas::PixelCanvasInterface, PixelInterface};
-use crate::pixels::{canvas::SharedPixelCanvasExt, color::RgbaInterface};
+use crate::{
+    pixels::{
+        canvas::{partition::CanvasPartition, PixelCanvasInterface},
+        Pixel, PixelInterface,
+    },
+    prelude::{MaybePixel, PixelCanvas},
+};
+use crate::{
+    pixels::{
+        canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt},
+        color::RgbaInterface,
+        position::IntoPixelStrictPosition,
+    },
+    prelude::PixelColor,
+};
 
 pub struct PixelAnimationBuilder {
     repeat: Repeat,
@@ -25,6 +38,10 @@ impl PixelAnimationBuilder {
             scale,
             images: images.into_iter().collect(),
         }
+    }
+
+    pub fn new_empty(repeat: Repeat, scale: usize) -> Self {
+        Self::new(repeat, scale, [])
     }
 
     pub fn save<P>(self, path: P) -> ImageResult<()>
@@ -60,6 +77,117 @@ impl PixelAnimationBuilder {
     }
 }
 
+pub fn create_animation<C>(
+    mut ctx: C,
+    frame_count: Repeat,
+    beginner: impl FnOnce(&mut C) + Copy,
+    frame_body: impl FnOnce(u16, &mut C) -> bool + Copy,
+    frame_finisher: impl FnOnce(u16, &mut C) + Copy,
+) -> C {
+    beginner(&mut ctx);
+    match frame_count {
+        Repeat::Finite(frame_count) => {
+            for i in 0..frame_count {
+                if frame_body(i, &mut ctx) {
+                    frame_finisher(i, &mut ctx)
+                } else {
+                    break;
+                }
+            }
+        }
+        Repeat::Infinite => {
+            let mut i = 0;
+            loop {
+                if frame_body(i, &mut ctx) {
+                    frame_finisher(i, &mut ctx);
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    ctx
+}
+
+pub struct SimpleAnimationContext<const H: usize, const W: usize, const PH: usize, const PW: usize>
+{
+    pub part: CanvasPartition<PH, PW, H, W, PixelCanvas<H, W, Pixel>, Pixel, MaybePixel>,
+    pub builder: PixelAnimationBuilder,
+}
+
+impl<const H: usize, const W: usize, const PH: usize, const PW: usize>
+    SimpleAnimationContext<H, W, PH, PW>
+{
+    pub fn new(
+        part: CanvasPartition<PH, PW, H, W, PixelCanvas<H, W, Pixel>, Pixel, MaybePixel>,
+        builder: PixelAnimationBuilder,
+    ) -> Self {
+        Self { part, builder }
+    }
+
+    pub fn update_part_color(
+        &mut self,
+        color: impl Into<<Pixel as PixelInterface>::ColorType> + Clone,
+    ) -> &mut SimpleAnimationContext<H, W, PH, PW>
+    where
+        Option<PixelColor>: From<<Pixel as PixelInterface>::ColorType> + Clone,
+    {
+        self.part
+            .update_color(Into::<<Pixel as PixelInterface>::ColorType>::into(color));
+        self
+    }
+
+    pub fn body_mut(&mut self) -> &mut PixelCanvas<H, W> {
+        self.part.source_table_mut()
+    }
+
+    pub fn update_body_color(
+        &mut self,
+        color: impl Into<<Pixel as PixelInterface>::ColorType> + Clone,
+    ) -> &mut SimpleAnimationContext<H, W, PH, PW> {
+        self.body_mut().fill(color);
+        self
+    }
+
+    pub fn capture(&mut self) -> &mut SimpleAnimationContext<H, W, PH, PW> {
+        self.builder
+            .push_frame_from_canvas(self.part.source_table());
+        self
+    }
+
+    pub fn save<P: AsRef<Path>>(self, path: P) -> Result<(), image::ImageError> {
+        self.builder.save(path)
+    }
+}
+
+pub fn create_simple_animation<const H: usize, const W: usize, const PH: usize, const PW: usize>(
+    partition_position: impl IntoPixelStrictPosition<H, W>,
+    builder: PixelAnimationBuilder,
+    frame_count: Repeat,
+    beginner: impl FnOnce(&mut SimpleAnimationContext<H, W, PH, PW>) + Copy,
+    frame_body: impl FnOnce(u16, &mut SimpleAnimationContext<H, W, PH, PW>) -> bool + Copy,
+    frame_finisher: impl FnOnce(u16, &mut SimpleAnimationContext<H, W, PH, PW>) + Copy,
+) -> SimpleAnimationContext<H, W, PH, PW> {
+    create_animation::<SimpleAnimationContext<H, W, PH, PW>>(
+        SimpleAnimationContext {
+            builder,
+            part: CanvasPartition::new(partition_position, PixelCanvas::default()),
+        },
+        frame_count,
+        |ctx| {
+            beginner(ctx);
+            ctx.capture();
+        },
+        frame_body,
+        |i, ctx| {
+            frame_finisher(i, ctx);
+            ctx.capture();
+        },
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::*;
@@ -68,37 +196,27 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let mut canvas = PixelCanvas::<5>::default();
-        let mut builder = PixelAnimationBuilder::new(Repeat::Infinite, 5, []);
-
-        // Basically a point (1x1).
-        let mut part = canvas.partition_mut::<1, 1>(TOP_LEFT);
-
-        part.update_color(BLUE);
-
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(TOP_CENTER);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(TOP_RIGHT);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(RIGHT_CENTER);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(BOTTOM_RIGHT);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(BOTTOM_CENTER);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(BOTTOM_LEFT);
-        builder.push_frame_from_canvas(part.source_table());
-
-        part.crop_to(LEFT_CENTER);
-        builder.push_frame_from_canvas(part.source_table());
-
-        builder.save("arts/animation_1.gif").unwrap();
+        create_simple_animation::<5, 5, 1, 1>(
+            TOP_LEFT,
+            PixelAnimationBuilder::new_empty(Repeat::Infinite, 5),
+            Repeat::Infinite,
+            |ctx| {
+                ctx.update_body_color(YELLOW);
+                ctx.update_part_color(BLUE);
+            },
+            |i, ctx| {
+                if let Some(next) = ctx.part.position().next() {
+                    ctx.part
+                        .replace_to(next, PixelColor::from_blue(255 - (i as u8 * 10) % 250));
+                    ctx.update_part_color(PixelColor::from_blue(255 - (i as u8 * 10) % 250));
+                    true
+                } else {
+                    false
+                }
+            },
+            |_, _ctx| {},
+        )
+        .save("arts/animation_0.gif")
+        .unwrap();
     }
 }

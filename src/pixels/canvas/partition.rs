@@ -210,14 +210,13 @@ where
         Self::_read_source(&self.source_table, self.position)
     }
 
-    fn clear_source(&mut self)
+    fn set_source_color(&mut self, color: impl Into<SP::ColorType> + Clone)
     where
         SP: PixelMutInterface,
         I: PixelCanvasMutInterface<SH, SW, SP>,
-        SP::ColorType: Default,
     {
         for (_, source_position) in self.included_positions() {
-            self.source_table.table_mut()[source_position].update_color(SP::ColorType::default());
+            self.source_table.table_mut()[source_position].update_color(color.clone());
         }
     }
 
@@ -292,7 +291,21 @@ where
         I: PixelCanvasMutInterface<SH, SW, SP>,
         SP::ColorType: From<MP::ColorType>,
     {
-        self.clear_source();
+        self.replace_to(new_position, SP::ColorType::default());
+    }
+
+    pub fn replace_to(
+        &mut self,
+        new_position: impl IntoPixelStrictPosition<SH, SW>,
+        remain_color: impl Into<SP::ColorType> + Clone,
+    ) where
+        MP::ColorType: Clone,
+        SP::ColorType: Clone,
+        SP: PixelMutInterface,
+        I: PixelCanvasMutInterface<SH, SW, SP>,
+        SP::ColorType: From<MP::ColorType>,
+    {
+        self.set_source_color(remain_color);
         self.position = new_position.into_pixel_strict_position();
         self.write_source();
     }
@@ -321,6 +334,14 @@ where
 
     pub fn source_table(&self) -> &I {
         &self.source_table
+    }
+
+    pub fn position(&self) -> PixelStrictPosition<SH, SW> {
+        self.position
+    }
+
+    pub fn source_table_mut(&mut self) -> &mut I {
+        &mut self.source_table
     }
 }
 
