@@ -1,9 +1,6 @@
 use std::{fs::File, path::Path};
 
-use image::{
-    codecs::gif::{GifEncoder, Repeat},
-    Frame, ImageBuffer, ImageResult, Rgba,
-};
+use image::{codecs::gif::GifEncoder, Frame, ImageBuffer, ImageResult, Rgba};
 
 use crate::{
     pixels::{
@@ -20,6 +17,8 @@ use crate::{
     },
     prelude::PixelColor,
 };
+
+pub use image::codecs::gif::Repeat;
 
 pub struct PixelAnimationBuilder {
     repeat: Repeat,
@@ -159,6 +158,10 @@ impl<const H: usize, const W: usize, const PH: usize, const PW: usize>
 
     pub fn save<P: AsRef<Path>>(self, path: P) -> Result<(), image::ImageError> {
         self.builder.save(path)
+    }
+
+    pub fn take_images(self) -> Vec<ImageBuffer<Rgba<u8>, Vec<u8>>> {
+        self.builder.images
     }
 }
 
