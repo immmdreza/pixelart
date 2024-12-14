@@ -1,6 +1,6 @@
 pub use crate::pixels::{
     canvas::{
-        drawable::Drawable, MaybePixelCanvas, PixelCanvas, PixelCanvasExt as _,
+        drawable::Drawable, pen::PixelPen, MaybePixelCanvas, PixelCanvas, PixelCanvasExt as _,
         PixelCanvasMutExt as _, SharedMutPixelCanvasExt as _, SharedPixelCanvasExt as _,
     },
     color::{colors::*, PixelColor, PixelColorExt as _},

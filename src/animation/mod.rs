@@ -8,6 +8,7 @@ use crate::{
         Pixel, PixelInterface,
     },
     prelude::{MaybePixel, PixelCanvas},
+    viewer::{view, ViewResult},
 };
 use crate::{
     pixels::{
@@ -160,6 +161,10 @@ impl<const H: usize, const W: usize, const PH: usize, const PW: usize>
         self.builder.save(path)
     }
 
+    pub fn view(self) -> ViewResult {
+        view([self.take_images()])
+    }
+
     pub fn take_images(self) -> Vec<ImageBuffer<Rgba<u8>, Vec<u8>>> {
         self.builder.images
     }
@@ -209,8 +214,7 @@ mod tests {
             },
             |i, ctx| {
                 if let Some(next) = ctx.part.position().next() {
-                    ctx.part
-                        .replace_to(next, PixelColor::from_blue(255 - (i as u8 * 10) % 250));
+                    ctx.part.copy_to(next);
                     ctx.update_part_color(PixelColor::from_blue(255 - (i as u8 * 10) % 250));
                     true
                 } else {

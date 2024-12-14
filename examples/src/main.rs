@@ -8,15 +8,20 @@ use pixelart::{
 };
 
 pub mod first_stone;
+pub mod partition;
 pub mod pen;
 pub mod template;
 
 fn main() {
+    partition::moving_plus();
+}
+
+#[allow(dead_code)]
+fn default() {
     let mut canvas = PixelCanvas::<17, 20, MaybePixel>::default();
     canvas.draw_exact_abs(AlienMonster);
 
     view([
-        vec![canvas.default_image_builder().with_scale(2).get_image()],
         create_simple_animation::<5, 5, 1, 1>(
             TOP_LEFT,
             PixelAnimationBuilder::new_empty(Repeat::Infinite, 5),
@@ -27,8 +32,7 @@ fn main() {
             },
             |i, ctx| {
                 if let Some(next) = ctx.part.position().next() {
-                    ctx.part
-                        .replace_to(next, PixelColor::from_blue(255 - (i as u8 * 10) % 250));
+                    ctx.part.crop_to(next);
                     ctx.update_part_color(PixelColor::from_blue(255 - (i as u8 * 10) % 250));
                     true
                 } else {
@@ -38,6 +42,7 @@ fn main() {
             |_, _ctx| {},
         )
         .take_images(),
+        vec![canvas.default_image_builder().with_scale(2).get_image()],
     ])
     .unwrap()
 }
