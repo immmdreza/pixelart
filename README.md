@@ -37,15 +37,16 @@ pub fn main() {
     let mut canvas = PixelCanvas::<5>::default();
 
     // mutably access the pixel at the center.
-    let center_pixel = &mut canvas[StrictPositions::Center];
+    let center_pixel = &mut canvas[CENTER];
     // Change its color to blue.
-    center_pixel.color = PixelColor::BLUE;
+    center_pixel.color = BLUE;
 
     // Create and save image based on the canvas.
-    let image_builder = canvas.default_image_builder().with_scale(5);
-    image_builder.save("my_first_art.png").unwrap();
+    canvas.default_image_builder()
+        .with_scale(5)
+        .save("my_first_art.png")
+        .unwrap();
 }
-
 ```
 
 This will be the result.
@@ -85,11 +86,12 @@ Let's break down and see what happened though it must be clear enough.
 2. Accessing the pixel at the center.
 
     You can index into canvas using positions (a combination of row and column of a pixel). In this case we use `StrictPositions` enum which can magically generate
-    positions based on canvas size. `StrictPositions::Center` is center position (`2, 2` as we start from zero you know).
+    positions based on canvas size. `CENTER` or `StrictPositions::Center` is center position (`2, 2`).
+    The good thing about strict positions is that they can't go out of range!
 
     `&mut` means I need mutable access to the pixel to change its color, otherwise i can't.
 
-    And the we can change color property of the pixel to `PixelColor::BLUE`.
+    And the we can change color property of the pixel to `BLUE` or `PixelColor::BLUE`.
 
 3. Generating image.
 
@@ -109,6 +111,56 @@ The library aims to provide more method and type to make your life easier, some 
 2. In above examples you can review usage of rust iterables and extension methods.
 
 3. Using [Pen](examples/src/pen.rs) to have fun.
+
+## Pixel Animation
+
+You can create simple animations using a series of pixel images as a gif.
+
+We have made a `create_simple_animation` method that helps getting started. it has a context that made of a canvas and a part of it to move around.
+
+This function automatically captures an image at the end of each frame.
+
+``` rust
+// A 2x2 canvas and a 1x1 part of it (a pixel) captured
+create_simple_animation::<5, 5, 1, 1>(
+    TOP_LEFT, // The initial position of the part inside the canvas
+    PixelAnimationBuilder::new_empty(Repeat::Infinite, 5), // Animation options
+    Repeat::Infinite, // number of loops, `Infinite` here means we manually break.
+    |ctx| { // Setup your canvas
+        ctx.update_body_color(YELLOW);
+        ctx.update_part_color(BLUE);
+    },
+    |i, ctx| {
+        if let Some(next) = ctx.part.position().next() {
+            ctx.part.copy_to(next); // Copy part pixels to next position (next pixel in row)
+            ctx.update_part_color(PixelColor::from_blue(255 - (i as u8 * 10) % 250)); // change part color for the next pixel
+            true
+        } else {
+            false // means not to continue any more.
+        }
+    },
+    |_, _ctx| {}, // do nothing else at the end of each frame
+)
+.save("arts/animation_0.gif")
+.unwrap();
+```
+
+### Result
+
+Here's the resulting animation.
+
+![The animation](arts/animation_0.gif)
+
+## Viewing?!
+
+You can enable a feature named `viewer` to view images or gifs directly inside a window without saving it. (Thanks to egui)
+
+``` rust
+canvas.default_image_builder()
+    .with_scale(5)
+    .view()
+    .unwrap();
+```
 
 ## Where?
 
