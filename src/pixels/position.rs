@@ -233,7 +233,7 @@ impl<const H: usize, const W: usize> PixelPositionOutOfBoundError<H, W> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct PixelStrictPosition<const H: usize, const W: usize> {
     raw: PixelPosition,
 }

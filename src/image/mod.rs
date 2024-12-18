@@ -110,11 +110,9 @@ where
     }
 
     /// Draws a pixel with its border.
-    fn draw_pixel_on_image<'p>(&self, pixel: &'p P, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
+    fn draw_pixel_on_image(&self, pixel: &P, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
     {
         // Draw pixel border
         let pos = pixel.position();
@@ -170,11 +168,9 @@ where
     }
 
     /// Draws the associated [`PixelCanvasInterface`] to an image buffer.
-    pub fn draw_on_image<'p>(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
+    pub fn draw_on_image(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
     {
         let table = self.canvas_ref.table();
 
@@ -186,11 +182,9 @@ where
     }
 
     /// Returns an [`ImageBuffer`] based on the current canvas attached.
-    pub fn get_image<'p>(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>>
+    pub fn get_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>>
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
     {
         let mut image = self.get_pixel_paper_image();
         self.draw_on_image(&mut image);
@@ -201,10 +195,8 @@ where
     /// Saves the [`ImageBuffer`] to a file at specified path.
     pub fn save<'p, Q>(&self, path: Q) -> Result<(), image::ImageError>
     where
-        'c: 'p,
-        P: 'p,
+        P::ColorType: RgbaInterface,
         Q: AsRef<Path>,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
     {
         let image = self.get_image();
         image.save(path)
@@ -212,11 +204,9 @@ where
 
     #[cfg(feature = "viewer")]
     /// View the image inside a window.
-    pub fn view<'p>(&self) -> ViewResult
+    pub fn view(&self) -> ViewResult
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
     {
         let image = self.get_image();
         crate::viewer::view([[image]])
@@ -224,11 +214,9 @@ where
 
     #[cfg(feature = "viewer")]
     /// View the image inside a window.
-    pub fn view_with_others<'p, T>(&self, others: T) -> ViewResult
+    pub fn view_with_others<T>(&self, others: T) -> ViewResult
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
         T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>,
     {
         let first_image = vec![self.get_image()];
@@ -240,9 +228,7 @@ where
     /// View the image inside a window.
     pub fn view_as_series<'p, T>(&self, others: T) -> ViewResult
     where
-        'c: 'p,
-        P: 'p,
-        &'p <P as PixelInterface>::ColorType: RgbaInterface + 'p,
+        P::ColorType: RgbaInterface,
         T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>,
     {
         let image = self.get_image();

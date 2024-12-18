@@ -39,7 +39,6 @@ fn default() {
                     false
                 }
             },
-            |_, _ctx| {},
         )
         .take_images(),
         vec![canvas.default_image_builder().with_scale(2).get_image()],

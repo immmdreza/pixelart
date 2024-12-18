@@ -6,7 +6,7 @@ use pixelart::{
 pub fn moving_plus() {
     create_simple_animation::<10, 10, 3, 3>(
         TOP_LEFT,
-        PixelAnimationBuilder::new_empty(Repeat::Infinite, 2),
+        PixelAnimationBuilder::new_empty(Repeat::Infinite, 3),
         Repeat::Infinite,
         |ctx| {
             let canvas = ctx.body_mut();
@@ -39,8 +39,7 @@ pub fn moving_plus() {
                 false
             }
         },
-        |_, _ctx| {},
     )
-    .save("../arts/animation_2.gif")
+    .view()
     .unwrap();
 }

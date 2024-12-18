@@ -16,6 +16,7 @@ use super::{
 };
 
 pub mod drawable;
+pub mod layered;
 pub mod partition;
 pub mod pen;
 pub mod row;

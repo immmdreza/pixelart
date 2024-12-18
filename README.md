@@ -165,7 +165,7 @@ canvas.default_image_builder()
 ## Where?
 
 1. For now we're focusing on creating images and make it as smooth as possible. But there're more to do.
-2. Generating pixel animations (More likely).
+2. Generating pixel animations (Most likely).
 3. Add some interactivity maybe?! (Not sure about this, must be so hard).
 
 ## License
