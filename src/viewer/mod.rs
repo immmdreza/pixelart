@@ -13,9 +13,10 @@ use eframe::{
     egui::{self, ColorImage, TextureHandle, TextureOptions},
     CreationContext,
 };
-use image::{ImageBuffer, Rgba};
+
 use uuid::Uuid;
 
+use crate::image::DefaultImageBuffer;
 use crate::pixels::canvas::templates::alien_monster::AlienMonster;
 use crate::pixels::canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt};
 use crate::prelude::{MaybePixel, PixelCanvas};
@@ -36,10 +37,10 @@ fn get_icon() -> IconData {
     }
 }
 
-pub fn view<T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>>(
+pub fn view<T: IntoIterator<Item = DefaultImageBuffer>>(
     images: impl IntoIterator<Item = T>,
 ) -> eframe::Result {
-    let images: Vec<Vec<ImageBuffer<Rgba<u8>, Vec<u8>>>> = images
+    let images: Vec<Vec<DefaultImageBuffer>> = images
         .into_iter()
         .map(|f| f.into_iter().collect())
         .collect();
@@ -77,7 +78,7 @@ struct ImageTextureInfo {
     image_width: f32,
 
     /// In case of a gif
-    images_series: Option<Vec<ImageBuffer<Rgba<u8>, Vec<u8>>>>,
+    images_series: Option<Vec<DefaultImageBuffer>>,
 }
 
 #[derive(Clone)]
@@ -95,7 +96,7 @@ struct MyApp {
 }
 
 impl MyApp {
-    fn new(cc: &CreationContext, images: Vec<Vec<ImageBuffer<Rgba<u8>, Vec<u8>>>>) -> Self {
+    fn new(cc: &CreationContext, images: Vec<Vec<DefaultImageBuffer>>) -> Self {
         let textures: Vec<_> = images
             .into_iter()
             .map(|image| {

@@ -1,5 +1,3 @@
-pub mod alien_monster;
-
 use crate::pixels::{
     color::IntoPixelColor,
     maybe::MaybePixel,
@@ -8,6 +6,9 @@ use crate::pixels::{
 };
 
 use super::{drawable::Drawable, PixelCanvas, PixelCanvasMutInterface, SharedMutPixelCanvasExt};
+
+pub mod alien_monster;
+pub mod heart;
 
 pub trait Template<const H: usize, const W: usize> {
     fn define<C: PixelCanvasMutInterface<H, W, MaybePixel>>(&self, canvas: &mut C);

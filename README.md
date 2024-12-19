@@ -124,7 +124,8 @@ This function automatically captures an image at the end of each frame.
 // A 2x2 canvas and a 1x1 part of it (a pixel) captured
 create_simple_animation::<5, 5, 1, 1>(
     TOP_LEFT, // The initial position of the part inside the canvas
-    PixelAnimationBuilder::new_empty(Repeat::Infinite, 5), // Animation options
+    5, // Scale up the images
+    Repeat::Infinite, // Decides the repeat of gif.
     Repeat::Infinite, // number of loops, `Infinite` here means we manually break.
     |ctx| { // Setup your canvas
         ctx.update_body_color(YELLOW);
@@ -150,6 +151,14 @@ create_simple_animation::<5, 5, 1, 1>(
 Here's the resulting animation.
 
 ![The animation](arts/animation_0.gif)
+
+## More advanced animations?
+
+You can of course create a bit more advanced animations using `AnimationContext` and `Animated` traits. Take a look at tests at: [animation::layered.rs](src/animation/layered.rs).
+
+Here's the result:
+
+![The animation](arts/layered_animation_0.gif)
 
 ## Viewing?!
 

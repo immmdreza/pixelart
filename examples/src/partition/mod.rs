@@ -1,12 +1,13 @@
 use pixelart::{
-    animation::{create_simple_animation, PixelAnimationBuilder, Repeat},
+    animation::{simple::create_simple_animation, Repeat},
     prelude::*,
 };
 
 pub fn moving_plus() {
     create_simple_animation::<10, 10, 3, 3>(
         TOP_LEFT,
-        PixelAnimationBuilder::new_empty(Repeat::Infinite, 3),
+        5,
+        Repeat::Infinite,
         Repeat::Infinite,
         |ctx| {
             let canvas = ctx.body_mut();
@@ -17,7 +18,7 @@ pub fn moving_plus() {
                 }
             }
 
-            let part = &mut ctx.part;
+            let part = ctx.part_mut();
 
             part.clear();
 
@@ -32,8 +33,8 @@ pub fn moving_plus() {
             part.write_source();
         },
         |_i, ctx| {
-            if let Some(next) = ctx.part.position().next() {
-                ctx.part.crop_to(next);
+            if let Some(next) = ctx.part().position().next() {
+                ctx.part_mut().crop_to(next);
                 true
             } else {
                 false

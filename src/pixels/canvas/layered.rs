@@ -76,6 +76,13 @@ impl<const H: usize, const W: usize> LayerData<H, W> {
         modifier(&mut self.canvas);
         self
     }
+
+    pub fn update_drawing_position(
+        &mut self,
+        updater: impl FnOnce(&PixelStrictPosition<H, W>) -> PixelStrictPosition<H, W>,
+    ) {
+        self.drawing_position = updater(&self.drawing_position);
+    }
 }
 
 #[derive(Debug, Error)]
@@ -84,10 +91,34 @@ pub enum AddLayerError {
     LayerTagDuplicated,
 }
 
+#[derive(Debug, Clone)]
+pub enum TopLayerId {
+    Tag(String),
+    Index(usize),
+}
+
+impl From<usize> for TopLayerId {
+    fn from(v: usize) -> Self {
+        Self::Index(v)
+    }
+}
+
+impl From<String> for TopLayerId {
+    fn from(v: String) -> Self {
+        Self::Tag(v)
+    }
+}
+
+impl From<&'static str> for TopLayerId {
+    fn from(v: &'static str) -> Self {
+        Self::Tag(v.to_string())
+    }
+}
+
 #[derive(Debug)]
 pub struct LayeredCanvas<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
-    base_layer: PixelCanvas<H, W, P>,
-    top_layers: Vec<LayerData<H, W>>, // Top layers are all using maybe (transparent) pixel
+    pub(crate) base_layer: PixelCanvas<H, W, P>,
+    pub(crate) top_layers: Vec<LayerData<H, W>>, // Top layers are all using maybe (transparent) pixel
 }
 
 impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
@@ -117,6 +148,41 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
             top.canvas.draw_on_exact(top.drawing_position, &mut base);
         }
         base
+    }
+
+    pub fn base_layer(&self) -> &PixelCanvas<H, W, P> {
+        &self.base_layer
+    }
+
+    pub fn base_layer_mut(&mut self) -> &mut PixelCanvas<H, W, P> {
+        &mut self.base_layer
+    }
+
+    pub fn top_layer(&self, layer_id: impl Into<TopLayerId>) -> Option<&LayerData<H, W>> {
+        let layer_id: TopLayerId = layer_id.into();
+        match layer_id {
+            TopLayerId::Tag(tag) => self
+                .top_layers
+                .iter()
+                .filter(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag))
+                .next(),
+            TopLayerId::Index(index) => self.top_layers.get(index),
+        }
+    }
+
+    pub fn top_layer_mut(
+        &mut self,
+        layer_id: impl Into<TopLayerId>,
+    ) -> Option<&mut LayerData<H, W>> {
+        let layer_id: TopLayerId = layer_id.into();
+        match layer_id {
+            TopLayerId::Tag(tag) => self
+                .top_layers
+                .iter_mut()
+                .filter(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag))
+                .next(),
+            TopLayerId::Index(index) => self.top_layers.get_mut(index),
+        }
     }
 }
 

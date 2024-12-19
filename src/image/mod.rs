@@ -19,6 +19,8 @@ use crate::pixels::{
 #[cfg(feature = "viewer")]
 use crate::viewer::ViewResult;
 
+pub type DefaultImageBuffer = ImageBuffer<Rgba<u8>, Vec<u8>>;
+
 /// Styles use by [`PixelImageBuilder`].
 #[derive(Debug, Clone)]
 pub struct PixelImageStyle {
@@ -89,7 +91,7 @@ where
         }
     }
 
-    fn get_pixel_paper_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>> {
+    fn get_pixel_paper_image(&self) -> DefaultImageBuffer {
         let separator_pixel_length = self.style.border_width;
 
         // How many pixels in height for blocks
@@ -104,13 +106,13 @@ where
         let separators_pixel_in_width = separators_count_in_width * separator_pixel_length;
         let width = blocks_pixel_in_width + separators_pixel_in_width;
 
-        let image: ImageBuffer<Rgba<u8>, Vec<u8>> = ImageBuffer::new(width as u32, height as u32);
+        let image: DefaultImageBuffer = ImageBuffer::new(width as u32, height as u32);
 
         image
     }
 
     /// Draws a pixel with its border.
-    fn draw_pixel_on_image(&self, pixel: &P, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
+    fn draw_pixel_on_image(&self, pixel: &P, image: &mut DefaultImageBuffer)
     where
         P::ColorType: RgbaInterface,
     {
@@ -168,7 +170,7 @@ where
     }
 
     /// Draws the associated [`PixelCanvasInterface`] to an image buffer.
-    pub fn draw_on_image(&self, image: &mut ImageBuffer<Rgba<u8>, Vec<u8>>)
+    pub fn draw_on_image(&self, image: &mut DefaultImageBuffer)
     where
         P::ColorType: RgbaInterface,
     {
@@ -182,7 +184,7 @@ where
     }
 
     /// Returns an [`ImageBuffer`] based on the current canvas attached.
-    pub fn get_image(&self) -> ImageBuffer<Rgba<u8>, Vec<u8>>
+    pub fn get_image(&self) -> DefaultImageBuffer
     where
         P::ColorType: RgbaInterface,
     {
@@ -217,7 +219,7 @@ where
     pub fn view_with_others<T>(&self, others: T) -> ViewResult
     where
         P::ColorType: RgbaInterface,
-        T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>,
+        T: IntoIterator<Item = DefaultImageBuffer>,
     {
         let first_image = vec![self.get_image()];
         let others: Vec<Vec<_>> = others.into_iter().map(|f| vec![f]).collect();
@@ -229,7 +231,7 @@ where
     pub fn view_as_series<'p, T>(&self, others: T) -> ViewResult
     where
         P::ColorType: RgbaInterface,
-        T: IntoIterator<Item = ImageBuffer<Rgba<u8>, Vec<u8>>>,
+        T: IntoIterator<Item = DefaultImageBuffer>,
     {
         let image = self.get_image();
         let images: Vec<_> = [image].into_iter().chain(others.into_iter()).collect();
