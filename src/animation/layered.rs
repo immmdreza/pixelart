@@ -89,17 +89,13 @@ where
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use image::codecs::gif::Repeat;
-
+pub mod examples {
     use crate::{
         animation::Animated,
         pixels::{
             canvas::{
                 layered::LayerData,
                 templates::{alien_monster::AlienMonster, heart::Heart},
-                SharedMutPixelCanvasExt,
             },
             position::PixelStrictPositionInterface,
             Pixel,
@@ -109,9 +105,9 @@ mod tests {
 
     use super::*;
 
-    struct MyLayeredAnimation;
+    pub struct MonstersLove;
 
-    impl Animated<50, 50, Pixel> for MyLayeredAnimation {
+    impl Animated<50, 50, Pixel> for MonstersLove {
         type ContextType = LayeredAnimationContext<50, 50, Pixel>;
 
         fn create_context(&mut self) -> Self::ContextType {
@@ -188,10 +184,16 @@ mod tests {
             true
         }
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::examples::MonstersLove;
+    use crate::animation::Animated;
 
     #[test]
     fn test_name() {
-        MyLayeredAnimation
+        MonstersLove
             .process()
             .save("arts/layered_animation_0.gif")
             .unwrap();
