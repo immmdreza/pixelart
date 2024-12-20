@@ -12,7 +12,7 @@ use crate::{
     prelude::{MaybePixel, PixelCanvas, PixelColor},
 };
 
-use super::{Animated, AnimationContext, PixelAnimationBuilder};
+use super::{Animated, AnimatedContext, PixelAnimationBuilder};
 
 #[cfg(feature = "viewer")]
 use crate::viewer::ViewResult;
@@ -24,7 +24,7 @@ pub struct SimpleAnimationContext<const H: usize, const W: usize, const PH: usiz
     pub(crate) builder: PixelAnimationBuilder,
 }
 
-impl<const H: usize, const W: usize, const PH: usize, const PW: usize> AnimationContext<H, W, Pixel>
+impl<const H: usize, const W: usize, const PH: usize, const PW: usize> AnimatedContext<H, W, Pixel>
     for SimpleAnimationContext<H, W, PH, PW>
 {
     fn builder(&self) -> &PixelAnimationBuilder {
@@ -215,5 +215,5 @@ pub fn create_simple_animation<const H: usize, const W: usize, const PH: usize, 
         setups,
         updater,
     );
-    animation.process()
+    animation.create()
 }

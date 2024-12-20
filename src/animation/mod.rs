@@ -1,9 +1,11 @@
+use std::marker::PhantomData;
 use std::{fs::File, path::Path};
 
 use image::{codecs::gif::GifEncoder, Frame, ImageResult};
 
 use crate::image::DefaultImageBuffer;
 use crate::pixels::{canvas::SharedPixelCanvasExt, color::RgbaInterface};
+use crate::pixels::{Pixel, PixelInitializer};
 use crate::{
     pixels::{canvas::PixelCanvasInterface, PixelInterface},
     prelude::PixelCanvas,
@@ -17,10 +19,21 @@ use crate::viewer::{view, ViewResult};
 pub mod layered;
 pub mod simple;
 
+#[derive(Debug)]
 pub struct PixelAnimationBuilder {
     pub(crate) repeat: Repeat,
     pub(crate) scale: usize,
     pub(crate) images: Vec<DefaultImageBuffer>,
+}
+
+impl Default for PixelAnimationBuilder {
+    fn default() -> Self {
+        Self {
+            repeat: Repeat::Infinite,
+            scale: Default::default(),
+            images: Default::default(),
+        }
+    }
 }
 
 impl PixelAnimationBuilder {
@@ -90,7 +103,7 @@ impl PixelAnimationBuilder {
     }
 }
 
-pub trait AnimationContext<const H: usize, const W: usize, P: PixelInterface> {
+pub trait AnimatedContext<const H: usize, const W: usize, P: PixelInterface> {
     fn frame_count(&self) -> &Repeat;
 
     fn builder(&self) -> &PixelAnimationBuilder;
@@ -114,18 +127,82 @@ pub trait AnimationContext<const H: usize, const W: usize, P: PixelInterface> {
     }
 }
 
+#[derive(Debug)]
+pub struct AnimationContext<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
+    frames: Repeat,
+    pub builder: PixelAnimationBuilder,
+    pub canvas: PixelCanvas<H, W, P>,
+}
+
+impl<const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P> {
+    pub fn new(repeat: Repeat) -> Self
+    where
+        <P as PixelInterface>::ColorType: std::default::Default,
+        <P as PixelInterface>::ColorType: Clone,
+        P: PixelInitializer,
+    {
+        Self {
+            frames: repeat,
+            builder: Default::default(),
+            canvas: Default::default(),
+        }
+    }
+
+    pub fn with_scale(mut self, scale: usize) -> Self {
+        self.builder.scale = scale;
+        self
+    }
+
+    pub fn with_gif_repeat(mut self, repeat: Repeat) -> Self {
+        self.builder.repeat = repeat;
+        self
+    }
+
+    pub fn with_modified_canvas(
+        mut self,
+        modifier: impl FnOnce(&mut PixelCanvas<H, W, P>),
+    ) -> Self {
+        modifier(&mut self.canvas);
+        self
+    }
+}
+
+impl<const H: usize, const W: usize, P: PixelInterface> AnimatedContext<H, W, P>
+    for AnimationContext<H, W, P>
+{
+    fn frame_count(&self) -> &Repeat {
+        &self.frames
+    }
+
+    fn builder(&self) -> &PixelAnimationBuilder {
+        &self.builder
+    }
+
+    fn builder_mut(&mut self) -> &mut PixelAnimationBuilder {
+        &mut self.builder
+    }
+
+    fn canvas(&self) -> &PixelCanvas<H, W, P> {
+        &self.canvas
+    }
+
+    fn canvas_mut(&mut self) -> &mut PixelCanvas<H, W, P> {
+        &mut self.canvas
+    }
+}
+
 pub trait Animated<const H: usize, const W: usize, P: PixelInterface>
 where
     <P as PixelInterface>::ColorType: RgbaInterface,
 {
-    type ContextType: AnimationContext<H, W, P>;
+    type ContextType: AnimatedContext<H, W, P>;
 
     fn create_context(&mut self) -> Self::ContextType;
 
     fn setup(&mut self, ctx: &mut Self::ContextType);
     fn update(&mut self, ctx: &mut Self::ContextType, i: u16) -> bool;
 
-    fn process(&mut self) -> <Self as Animated<H, W, P>>::ContextType {
+    fn create(&mut self) -> <Self as Animated<H, W, P>>::ContextType {
         let mut ctx = self.create_context();
         self.setup(&mut ctx);
         match ctx.frame_count() {
@@ -152,6 +229,68 @@ where
         }
 
         ctx
+    }
+}
+
+pub struct Animation<
+    C: AnimatedContext<H, W, P>,
+    const H: usize,
+    const W: usize,
+    P: PixelInterface,
+    B: FnOnce() -> C + Copy,
+    S: FnOnce(&mut C) + Copy,
+    U: FnOnce(&mut C, u16) -> bool + Copy,
+> {
+    context_builder: B,
+    updater: U,
+    setup: S,
+    _phantom: PhantomData<(C, P)>,
+}
+
+impl<
+        C: AnimatedContext<H, W, P>,
+        const H: usize,
+        const W: usize,
+        P: PixelInterface,
+        B: FnOnce() -> C + Copy,
+        S: FnOnce(&mut C) + Copy,
+        U: FnOnce(&mut C, u16) -> bool + Copy,
+    > Animation<C, H, W, P, B, S, U>
+{
+    pub fn new(context_builder: B, setup: S, updater: U) -> Self {
+        Self {
+            context_builder,
+            updater,
+            setup,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<
+        C: AnimatedContext<H, W, P>,
+        const H: usize,
+        const W: usize,
+        P: PixelInterface,
+        B: FnOnce() -> C + Copy,
+        S: FnOnce(&mut C) + Copy,
+        U: FnOnce(&mut C, u16) -> bool + Copy,
+    > Animated<H, W, P> for Animation<C, H, W, P, B, S, U>
+where
+    <P as PixelInterface>::ColorType: RgbaInterface,
+{
+    type ContextType = C;
+
+    fn create_context(&mut self) -> Self::ContextType {
+        (self.context_builder)()
+    }
+
+    fn setup(&mut self, ctx: &mut Self::ContextType) {
+        (self.setup)(ctx)
+    }
+
+    fn update(&mut self, ctx: &mut Self::ContextType, i: u16) -> bool {
+        (self.updater)(ctx, i)
     }
 }
 
@@ -185,6 +324,27 @@ mod tests {
             },
         );
 
-        animation.process().save("arts/animation_0.gif").unwrap();
+        animation.create().save("arts/animation_0.gif").unwrap();
+    }
+
+    #[test]
+    fn feature() {
+        Animation::new(
+            || AnimationContext::<5>::new(Repeat::Finite(10)).with_scale(5),
+            |ctx| {
+                ctx.canvas_mut().fill(BLACK);
+            },
+            |ctx, i| {
+                let new_color = ctx.canvas()[TOP_LEFT]
+                    .color()
+                    .map_all(|x| x + (i as u8 * 5));
+                ctx.canvas_mut().fill(new_color);
+                true
+            },
+        )
+        .create()
+        .builder
+        .save("arts/animation_3.gif")
+        .unwrap();
     }
 }

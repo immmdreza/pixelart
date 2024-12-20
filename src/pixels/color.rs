@@ -199,6 +199,42 @@ impl PixelColor {
     pub fn b(&self) -> u8 {
         self.b
     }
+
+    pub fn map(&self, mapper: impl FnOnce(&PixelColor) -> PixelColor) -> PixelColor {
+        mapper(self)
+    }
+
+    pub fn map_r(&self, mapper: impl FnOnce(u8) -> u8) -> PixelColor {
+        Self {
+            r: mapper(self.r),
+            g: self.g,
+            b: self.b,
+        }
+    }
+
+    pub fn map_g(&self, mapper: impl FnOnce(u8) -> u8) -> PixelColor {
+        Self {
+            r: self.r,
+            g: mapper(self.g),
+            b: self.b,
+        }
+    }
+
+    pub fn map_b(&self, mapper: impl FnOnce(u8) -> u8) -> PixelColor {
+        Self {
+            r: self.r,
+            g: self.g,
+            b: mapper(self.b),
+        }
+    }
+
+    pub fn map_all(&self, mapper: impl FnOnce(u8) -> u8 + Copy) -> PixelColor {
+        Self {
+            r: mapper(self.r),
+            g: mapper(self.g),
+            b: mapper(self.b),
+        }
+    }
 }
 
 impl TryFrom<Option<PixelColor>> for PixelColor {

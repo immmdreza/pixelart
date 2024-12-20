@@ -10,7 +10,7 @@ use crate::{
     prelude::PixelColor,
 };
 
-use super::{AnimationContext, PixelAnimationBuilder};
+use super::{AnimatedContext, PixelAnimationBuilder};
 
 #[cfg(feature = "viewer")]
 use crate::viewer::ViewResult;
@@ -52,7 +52,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredAnimationContext<
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P>
+impl<const H: usize, const W: usize, P: PixelInterface> AnimatedContext<H, W, P>
     for LayeredAnimationContext<H, W, P>
 where
     P: Clone + PixelMutInterface,
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn test_name() {
         MonstersLove
-            .process()
+            .create()
             .save("arts/layered_animation_0.gif")
             .unwrap();
     }
