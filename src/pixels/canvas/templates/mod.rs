@@ -1,8 +1,10 @@
-use crate::pixels::{
-    color::IntoPixelColor,
-    maybe::MaybePixel,
-    position::{PixelStrictPositionInterface, StrictPositions},
-    PixelInterface,
+use crate::{
+    pixels::{
+        maybe::MaybePixel,
+        position::{PixelStrictPositionInterface, StrictPositions},
+        PixelInterface,
+    },
+    prelude::PixelColor,
 };
 
 use super::{drawable::Drawable, PixelCanvas, PixelCanvasMutInterface, SharedMutPixelCanvasExt};
@@ -40,20 +42,22 @@ impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W, MaybePixe
 }
 
 /// A template vertical line with const `H` height.
-pub fn vertical_line<const H: usize>(color: impl IntoPixelColor) -> PixelCanvas<H, 1, MaybePixel> {
-    PixelCanvas::<H, 1, MaybePixel>::new(Some(color.into_pixel_color()))
+pub fn vertical_line<const H: usize>(
+    color: impl Into<PixelColor>,
+) -> PixelCanvas<H, 1, MaybePixel> {
+    PixelCanvas::<H, 1, MaybePixel>::new(Some(color.into()))
 }
 
 /// A template horizontal line with const `W` width.
 pub fn horizontal_line<const W: usize>(
-    color: impl IntoPixelColor,
+    color: impl Into<PixelColor>,
 ) -> PixelCanvas<1, W, MaybePixel> {
-    PixelCanvas::<1, W, MaybePixel>::new(Some(color.into_pixel_color()))
+    PixelCanvas::<1, W, MaybePixel>::new(Some(color.into()))
 }
 
 /// Bordered `H`  * `W` square.
 pub fn rectangle<const H: usize, const W: usize>(
-    color: impl IntoPixelColor + Clone,
+    color: impl Into<PixelColor> + Clone,
 ) -> PixelCanvas<H, W, MaybePixel> {
     let mut table = PixelCanvas::<H, W, MaybePixel>::default();
 
@@ -72,7 +76,9 @@ pub fn rectangle<const H: usize, const W: usize>(
     table
 }
 
-pub fn square<const H: usize>(color: impl IntoPixelColor + Clone) -> PixelCanvas<H, H, MaybePixel> {
+pub fn square<const H: usize>(
+    color: impl Into<PixelColor> + Clone,
+) -> PixelCanvas<H, H, MaybePixel> {
     rectangle::<H, H>(color)
 }
 

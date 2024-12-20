@@ -9,11 +9,12 @@ use imageproc::{
     rect::Rect,
 };
 
-use crate::pixels::{
-    canvas::PixelCanvasInterface,
-    color::{IntoPixelColor, RgbaInterface},
-    position::PixelPositionInterface,
-    PixelInterface,
+use crate::{
+    pixels::{
+        canvas::PixelCanvasInterface, color::RgbaInterface, position::PixelPositionInterface,
+        PixelInterface,
+    },
+    prelude::PixelColor,
 };
 
 #[cfg(feature = "viewer")]
@@ -36,11 +37,15 @@ impl Default for PixelImageStyle {
 }
 
 impl PixelImageStyle {
-    pub fn new(pixel_width: usize, border_width: usize, border_color: impl IntoPixelColor) -> Self {
+    pub fn new(
+        pixel_width: usize,
+        border_width: usize,
+        border_color: impl Into<PixelColor>,
+    ) -> Self {
         Self {
             pixel_width,
             border_width,
-            border_color: border_color.into_pixel_color().rgba(),
+            border_color: border_color.into().rgba(),
         }
     }
 

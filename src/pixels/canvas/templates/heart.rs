@@ -1,6 +1,6 @@
 use super::Template;
 
-use crate::{pixels::position::PixelStrictPositionInterface, prelude::*};
+use crate::prelude::*;
 
 pub struct HalfHeart;
 
@@ -24,13 +24,13 @@ impl Template<6, 4> for HalfHeart {
 
 pub struct Heart;
 
-impl Template<6, 8> for Heart {
-    fn define<C: crate::pixels::canvas::PixelCanvasMutInterface<6, 8, MaybePixel>>(
+impl Template<6, 7> for Heart {
+    fn define<C: crate::pixels::canvas::PixelCanvasMutInterface<6, 7, MaybePixel>>(
         &self,
         canvas: &mut C,
     ) {
         canvas.draw(TOP_LEFT, HalfHeart);
-        canvas.draw(TOP_CENTER.bounding_left(1), HalfHeart.create().flip_y());
+        canvas.draw(TOP_CENTER, HalfHeart.create().flip_y());
     }
 }
 
