@@ -171,6 +171,26 @@ canvas.default_image_builder()
     .unwrap();
 ```
 
+## Features
+
+- Take out picture outputs in jpg or transparent formats like png (where unused pixels are omitted).
+
+![alt text](arts/features/transparency.png)
+
+- Save file using a proper format or view them inside multiple windows (viewer feature, like above).
+- Create pixel animation (like gifs).
+- Layered canvas: to create multi layer canvas and animation.
+- Canvas partition: to take control of a part of canvas and make changes on it or moving it.
+- Pen: To have a pen like control while drawing.
+- Templates: Create templates and use them wherever you want.
+- A lot of useful helper types and method:
+
+    - Canvass have fixed positions.
+    - So we have strict positions, Like: top left, bottom right and ...
+    - Fortunately or Unfortunately, we have super trait rich and flexible api.
+    - Helper types and functions to create animations (like what you saw).
+    - ...
+
 ## Where?
 
 1. For now we're focusing on creating images and make it as smooth as possible. But there're more to do.
