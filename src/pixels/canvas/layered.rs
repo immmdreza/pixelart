@@ -138,10 +138,10 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
         Ok(self.top_layers.len() - 1)
     }
 
-    pub fn get_resulting_canvas(&self) -> PixelCanvas<H, W, P>
+    pub fn get_resulting_canvas<E>(&self) -> PixelCanvas<H, W, P>
     where
         P: Clone + PixelMutInterface,
-        <P as PixelInterface>::ColorType: From<Option<PixelColor>>,
+        P::ColorType: TryFrom<Option<PixelColor>, Error = E>,
     {
         let mut base = self.base_layer.clone();
         for top in self.top_layers.iter() {

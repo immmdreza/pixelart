@@ -286,35 +286,35 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         self.fill(P::ColorType::default())
     }
 
-    fn draw<const HD: usize, const WD: usize, MP: PixelInterface>(
+    fn draw<const HD: usize, const WD: usize, MP: PixelInterface, E>(
         &mut self,
         start_pos: impl IntoPixelStrictPosition<H, W>,
         drawable: impl Drawable<HD, WD, MP>,
     ) where
         Self: Sized,
         <MP as PixelInterface>::ColorType: Clone,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         drawable.draw_on(start_pos, self)
     }
 
-    fn draw_exact<MP: PixelInterface>(
+    fn draw_exact<MP: PixelInterface, E>(
         &mut self,
         start_pos: impl IntoPixelStrictPosition<H, W>,
         drawable: impl Drawable<H, W, MP>,
     ) where
         Self: Sized,
         <MP as PixelInterface>::ColorType: Clone,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         drawable.draw_on_exact(start_pos, self)
     }
 
-    fn draw_exact_abs<MP: PixelInterface>(&mut self, drawable: impl Drawable<H, W, MP>)
+    fn draw_exact_abs<MP: PixelInterface, E>(&mut self, drawable: impl Drawable<H, W, MP>)
     where
         Self: Sized,
         <MP as PixelInterface>::ColorType: Clone,
-        <P as PixelInterface>::ColorType: From<<MP as PixelInterface>::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         drawable.draw_on_exact_abs(self)
     }

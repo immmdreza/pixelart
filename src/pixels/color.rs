@@ -1,6 +1,7 @@
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 use image::{Rgb, Rgba};
+use thiserror::Error;
 
 pub mod colors {
     use super::PixelColor;
@@ -200,9 +201,11 @@ impl PixelColor {
     }
 }
 
-impl From<Option<PixelColor>> for PixelColor {
-    fn from(color: Option<PixelColor>) -> Self {
-        color.expect("There's no color here!")
+impl TryFrom<Option<PixelColor>> for PixelColor {
+    type Error = ColorConversionError<NoInformation>;
+
+    fn try_from(value: Option<PixelColor>) -> Result<Self, Self::Error> {
+        value.ok_or(ColorConversionError(NoInformation))
     }
 }
 
@@ -301,3 +304,13 @@ mod pixel_color_tests {
         assert_eq!(PixelColor::default(), PixelColor::WHITE);
     }
 }
+
+#[derive(Debug, Error)]
+#[error("Failed converting color ({0}).")]
+pub struct ColorConversionError<T: Error>(T);
+
+#[derive(Debug, Error)]
+#[error("No information given")]
+pub struct NoInformation;
+
+pub type DefaultColorConversionError = ColorConversionError<NoInformation>;

@@ -104,20 +104,22 @@ where
     MP: PixelInterface,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C, E>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        P::ColorType: From<<MP as PixelInterface>::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         for (my_position, source_position) in
             Self::_included_positions::<MH, MW, HC, WC>(start_pos.into_pixel_strict_position())
         {
             let my_color = self.partition_table[my_position].color().clone();
-            canvas.table_mut()[source_position].update_color(my_color);
+            if let Ok(my_color) = P::ColorType::try_from(my_color) {
+                canvas.table_mut()[source_position].update_color(my_color);
+            }
         }
     }
 }
@@ -211,34 +213,34 @@ where
         Self::_read_source(&self.source_table, self.position)
     }
 
-    fn set_source_color(&mut self, color: impl Into<Option<SP::ColorType>>)
+    fn set_source_color<E>(&mut self, color: impl Into<Option<SP::ColorType>>)
     where
         SP: PixelMutInterface,
         I: PixelCanvasMutInterface<SH, SW, SP>,
         MP::ColorType: Clone,
-        SP::ColorType: From<MP::ColorType> + Clone,
+        SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {
         let chosen_color: Option<SP::ColorType> = color.into();
         for (part_position, source_position) in self.included_positions() {
             if self.partition_table()[part_position].has_color() {
-                self.source_table.table_mut()[source_position].update_color(
-                    if let Some(color) = &chosen_color {
-                        color.clone()
-                    } else {
-                        Into::<SP::ColorType>::into(
-                            self.partition_snapshot_table[part_position].color().clone(),
-                        )
-                    },
-                );
+                if let Some(color) = &chosen_color {
+                    self.source_table.table_mut()[source_position].update_color(color.clone());
+                } else {
+                    if let Ok(color) = SP::ColorType::try_from(
+                        self.partition_snapshot_table[part_position].color().clone(),
+                    ) {
+                        self.source_table.table_mut()[source_position].update_color(color);
+                    }
+                }
             }
         }
     }
 
-    pub fn write_source(&mut self)
+    pub fn write_source<E>(&mut self)
     where
         I: PixelCanvasMutInterface<SH, SW, SP>,
         SP: PixelMutInterface,
-        SP::ColorType: From<MP::ColorType> + Clone,
+        SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
         MP: PixelMutInterface,
         MP::ColorType: From<SP::ColorType> + Clone,
     {
@@ -247,8 +249,11 @@ where
                 let new_color = self.partition_table[my_position].color().clone();
                 let source_current_color =
                     self.source_table.table()[source_position].color().clone();
-                self.partition_snapshot_table[my_position].update_color(source_current_color);
-                self.source_table.table_mut()[source_position].update_color(new_color);
+
+                if let Ok(new_color) = SP::ColorType::try_from(new_color) {
+                    self.partition_snapshot_table[my_position].update_color(source_current_color);
+                    self.source_table.table_mut()[source_position].update_color(new_color);
+                }
             }
         }
     }
@@ -289,24 +294,24 @@ where
         self.read_source();
     }
 
-    pub fn update_color(&mut self, color: impl Into<MP::ColorType> + Clone)
+    pub fn update_color<E>(&mut self, color: impl Into<MP::ColorType> + Clone)
     where
         MP: PixelMutInterface,
         MP::ColorType: From<SP::ColorType> + Clone,
         SP: PixelMutInterface,
         I: PixelCanvasMutInterface<SH, SW, SP>,
-        SP::ColorType: From<MP::ColorType> + Clone,
+        SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {
         SharedMutPixelCanvasExt::fill(self, color);
         self.write_source();
     }
 
     /// .
-    pub fn crop_to(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
+    pub fn crop_to<E>(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
     where
         MP: PixelMutInterface,
         MP::ColorType: From<SP::ColorType> + Clone,
-        SP::ColorType: From<MP::ColorType> + Clone + Default,
+        SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone + Default,
         SP: PixelMutInterface,
         I: PixelCanvasMutInterface<SH, SW, SP>,
     {
@@ -316,13 +321,13 @@ where
     }
 
     /// .
-    pub fn copy_to(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
+    pub fn copy_to<E>(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
     where
         MP: PixelMutInterface,
         MP::ColorType: Clone + From<SP::ColorType>,
         SP: PixelMutInterface,
         I: PixelCanvasMutInterface<SH, SW, SP>,
-        SP::ColorType: From<MP::ColorType> + Clone,
+        SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {
         self.position = new_position.into_pixel_strict_position();
         self.write_source();

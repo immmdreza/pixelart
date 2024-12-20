@@ -56,7 +56,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P
     for LayeredAnimationContext<H, W, P>
 where
     P: Clone + PixelMutInterface,
-    <P as PixelInterface>::ColorType: From<Option<PixelColor>>,
+    <P as PixelInterface>::ColorType: TryFrom<Option<PixelColor>>,
 {
     fn builder(&self) -> &PixelAnimationBuilder {
         &self.builder

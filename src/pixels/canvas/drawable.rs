@@ -17,37 +17,46 @@ where
     /// Draws the drawable on the canvas.
     ///
     /// The `H` and `W` on canvas and drawable dose'nt have to be the same though they can.
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C, E>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        P::ColorType: From<MP::ColorType>;
+        P::ColorType: TryFrom<MP::ColorType, Error = E>;
 
     /// As same as [`Drawable::draw_on`] but the `H` and `W` on canvas and drawable are same
-    fn draw_on_exact<P, C>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
+    fn draw_on_exact<P, C, E>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
     where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<H, W, P>,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
-        self.draw_on::<H, W, P, C>(start_pos, canvas)
+        self.draw_on::<H, W, P, C, E>(start_pos, canvas)
     }
 
     /// As same as [`Drawable::draw_on_exact`] but the start point is TopLeft (0, 0).
-    fn draw_on_exact_abs<P, C>(&self, canvas: &mut C)
+    fn draw_on_exact_abs<P, C, E>(&self, canvas: &mut C)
     where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<H, W, P>,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
-        self.draw_on_exact::<P, C>(StrictPositions::TopLeft, canvas)
+        self.draw_on_exact::<P, C, E>(StrictPositions::TopLeft, canvas)
     }
 }
 
-pub fn draw_canvas_on<const H: usize, const W: usize, const HC: usize, const WC: usize, P, C, MP>(
+pub fn draw_canvas_on<
+    const H: usize,
+    const W: usize,
+    const HC: usize,
+    const WC: usize,
+    P,
+    C,
+    MP,
+    E,
+>(
     me: &PixelTable<H, W, MP>,
     start_pos: impl IntoPixelStrictPosition<HC, WC>,
     canvas: &mut C,
@@ -56,7 +65,7 @@ pub fn draw_canvas_on<const H: usize, const W: usize, const HC: usize, const WC:
     P: PixelMutInterface,
     C: PixelCanvasMutInterface<HC, WC, P>,
     MP::ColorType: Clone,
-    P::ColorType: From<MP::ColorType>,
+    P::ColorType: TryFrom<MP::ColorType, Error = E>,
 {
     let start_pos = start_pos.into_pixel_strict_position();
     for pixel in me.iter_pixels().filter(|f| f.has_color()) {
@@ -64,7 +73,9 @@ pub fn draw_canvas_on<const H: usize, const W: usize, const HC: usize, const WC:
             .checked_down(pixel.position().row())
             .map(|res| res.checked_right(pixel.position().column()))
         {
-            canvas.table_mut()[pos_on_canvas].update_color(pixel.color().clone());
+            if let Ok(color) = P::ColorType::try_from(pixel.color().clone()) {
+                canvas.table_mut()[pos_on_canvas].update_color(color);
+            }
         }
     }
 }
@@ -73,14 +84,14 @@ impl<const H: usize, const W: usize, MP: PixelInterface> Drawable<H, W, MP> for 
 where
     MP::ColorType: Clone,
 {
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C, E>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         draw_canvas_on(self, start_pos, canvas)
     }
@@ -91,14 +102,14 @@ impl<const H: usize, const W: usize, MP: PixelInterface> Drawable<H, W, MP>
 where
     MP::ColorType: Clone,
 {
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C, E>(
         &self,
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        P::ColorType: From<MP::ColorType>,
+        P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         self.table().draw_on(start_pos, canvas);
     }

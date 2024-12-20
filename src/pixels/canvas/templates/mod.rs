@@ -27,14 +27,14 @@ pub trait Template<const H: usize, const W: usize> {
 }
 
 impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W, MaybePixel> for T {
-    fn draw_on<const HC: usize, const WC: usize, P, C>(
+    fn draw_on<const HC: usize, const WC: usize, P, C, E>(
         &self,
         start_pos: impl crate::pixels::position::IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
         P: crate::pixels::PixelMutInterface,
         C: PixelCanvasMutInterface<HC, WC, P>,
-        P::ColorType: From<<MaybePixel as PixelInterface>::ColorType>,
+        P::ColorType: TryFrom<<MaybePixel as PixelInterface>::ColorType, Error = E>,
     {
         let template = self.create();
         canvas.draw(start_pos, template);
