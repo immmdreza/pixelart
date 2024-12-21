@@ -185,7 +185,7 @@ impl<
     fn create_context(&mut self) -> Self::ContextType {
         Self::ContextType {
             frame_count: self.frame_count,
-            part: CanvasPartition::new(self.partition_position.clone(), PixelCanvas::default()),
+            part: CanvasPartition::new(self.partition_position, PixelCanvas::default()),
             builder: PixelAnimationBuilder::new_empty(self.gif_repeat, self.scale),
         }
     }

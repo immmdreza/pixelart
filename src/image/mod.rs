@@ -200,7 +200,7 @@ where
     }
 
     /// Saves the [`ImageBuffer`] to a file at specified path.
-    pub fn save<'p, Q>(&self, path: Q) -> Result<(), image::ImageError>
+    pub fn save<Q>(&self, path: Q) -> Result<(), image::ImageError>
     where
         P::ColorType: RgbaInterface,
         Q: AsRef<Path>,
@@ -233,13 +233,13 @@ where
 
     #[cfg(feature = "viewer")]
     /// View the image inside a window.
-    pub fn view_as_series<'p, T>(&self, others: T) -> ViewResult
+    pub fn view_as_series<T>(&self, others: T) -> ViewResult
     where
         P::ColorType: RgbaInterface,
         T: IntoIterator<Item = DefaultImageBuffer>,
     {
         let image = self.get_image();
-        let images: Vec<_> = [image].into_iter().chain(others.into_iter()).collect();
+        let images: Vec<_> = [image].into_iter().chain(others).collect();
         crate::viewer::view([images])
     }
 }

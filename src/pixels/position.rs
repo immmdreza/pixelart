@@ -255,11 +255,11 @@ impl<const H: usize, const W: usize> Iterator for PixelStrictPosition<H, W> {
                 *self = PixelStrictPosition {
                     raw: PixelPosition::new(next.row(), 0),
                 };
-                Some(self.clone())
+                Some(*self)
             }
         } else {
             // We can safely go right by one.
-            *self = next.clone();
+            *self = next;
             Some(next)
         }
     }

@@ -76,7 +76,7 @@ impl PixelInterface for Pixel {
 
 impl PixelMutInterface for Pixel {
     fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType {
-        std::mem::replace(&mut self.color, color.into()).into()
+        std::mem::replace(&mut self.color, color.into())
     }
 }
 
@@ -114,7 +114,7 @@ impl PixelInterface for &mut Pixel {
 
 impl PixelMutInterface for &mut Pixel {
     fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType {
-        std::mem::replace(&mut self.color, color.into()).into()
+        std::mem::replace(&mut self.color, color.into())
     }
 }
 
@@ -169,7 +169,7 @@ pub trait PixelIterExt<Item: PixelInterface>: Iterator<Item = Item> {
 // impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
 // impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
 
-impl<'p, T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = P> {}
+impl<T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = P> {}
 
 /// A set of extension methods for a mutable only iterator over [`Pixel`]s.
 pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
@@ -186,4 +186,4 @@ pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
     }
 }
 
-impl<'p, T, P: PixelMutInterface> PixelIterMutExt<'p, P> for T where T: Iterator<Item = P> {}
+impl<T, P: PixelMutInterface> PixelIterMutExt<'_, P> for T where T: Iterator<Item = P> {}

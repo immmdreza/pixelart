@@ -304,21 +304,21 @@ pub trait PixelColorExt: PixelColorInterface {
 
 impl<T> PixelColorExt for T where T: PixelColorInterface {}
 
-impl Into<Rgba<u8>> for PixelColor {
-    fn into(self) -> Rgba<u8> {
-        self.rgba()
+impl From<PixelColor> for Rgba<u8> {
+    fn from(val: PixelColor) -> Self {
+        val.rgba()
     }
 }
 
-impl Into<Rgba<u8>> for &PixelColor {
-    fn into(self) -> Rgba<u8> {
-        self.rgba()
+impl From<&PixelColor> for Rgba<u8> {
+    fn from(val: &PixelColor) -> Self {
+        val.rgba()
     }
 }
 
-impl Into<Rgba<u8>> for &mut PixelColor {
-    fn into(self) -> Rgba<u8> {
-        self.rgba()
+impl From<&mut PixelColor> for Rgba<u8> {
+    fn from(val: &mut PixelColor) -> Self {
+        val.rgba()
     }
 }
 

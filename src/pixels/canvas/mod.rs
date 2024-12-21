@@ -166,14 +166,14 @@ fn _fill_inside<
     let pos = point_inside.into_pixel_strict_position();
     let base_color = base_color.unwrap_or(canvas.table()[&pos].color().clone());
 
-    canvas.update_color_at(&pos, color.clone());
+    canvas.update_color_at(pos, color.clone());
 
     for dir in
         SingleCycle::new(super::position::Direction::Up).filter(|dir| MAIN_DIRECTIONS.contains(dir))
     {
         if let Ok(new_pos) = pos.checked_direction(dir, 1) {
-            if canvas.color_at(&new_pos) == &base_color {
-                canvas.update_color_at(&new_pos, color.clone());
+            if canvas.color_at(new_pos) == &base_color {
+                canvas.update_color_at(new_pos, color.clone());
                 _fill_inside(canvas, Some(base_color.clone()), color.clone(), new_pos)
             }
         }
@@ -210,7 +210,7 @@ pub trait SharedPixelCanvasExt<const H: usize, const W: usize, P: PixelInterface
         self.table()[pos].color()
     }
 
-    fn any_partition<'a, const MH: usize, const MW: usize, MP: PixelInterface>(
+    fn any_partition<'a, const MH: usize, const MW: usize, MP>(
         &'a self,
         top_left: impl IntoPixelStrictPosition<H, W>,
     ) -> CanvasPartition<MH, MW, H, W, &'a Self, P, MP>
@@ -351,7 +351,7 @@ pub trait SharedMutPixelCanvasExt<const H: usize, const W: usize, P: PixelMutInt
         self.table_mut()[pos].update_color(color)
     }
 
-    fn any_partition_mut<'a, const MH: usize, const MW: usize, MP: PixelInterface>(
+    fn any_partition_mut<'a, const MH: usize, const MW: usize, MP>(
         &'a mut self,
         top_left: impl IntoPixelStrictPosition<H, W>,
     ) -> CanvasPartition<MH, MW, H, W, &'a mut Self, P, MP>

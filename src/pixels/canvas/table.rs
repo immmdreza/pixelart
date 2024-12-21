@@ -33,7 +33,7 @@ impl<const H: usize, const W: usize, P: PixelMutPosition + PixelInterface> Pixel
 impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for PixelTable<H, W, P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for pix in self.iter() {
-            write!(f, "{}\n", pix)?;
+            writeln!(f, "{}", pix)?;
         }
         Ok(())
     }
@@ -95,7 +95,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     /// }
     /// ```
     pub fn iter_pixels(&self) -> impl Iterator<Item = &P> {
-        self.iter().map(|f| f.iter()).flatten()
+        self.iter().flat_map(|f| f.iter())
     }
 
     /// Use this type to iterate over mutable ref of the pixels.
@@ -111,7 +111,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     /// }
     /// ```
     pub fn iter_pixels_mut(&mut self) -> impl Iterator<Item = &mut P> {
-        self.iter_mut().map(|f| f.iter_mut()).flatten()
+        self.iter_mut().flat_map(|f| f.iter_mut())
     }
 
     /// Calls a closure on each read-only ref pixel of this table.

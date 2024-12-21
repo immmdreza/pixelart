@@ -28,13 +28,8 @@ pub struct CanvasAttachedMarker<
     _phantom: PhantomData<&'c (P, C)>,
 }
 
-impl<
-        'c,
-        const H: usize,
-        const W: usize,
-        P: PixelMutInterface,
-        C: PixelCanvasMutInterface<H, W, P>,
-    > CanvasAttachedMarker<'c, H, W, P, C>
+impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInterface<H, W, P>>
+    CanvasAttachedMarker<'_, H, W, P, C>
 {
     pub fn new(current_pos: impl IntoPixelStrictPosition<H, W>) -> Self {
         Self {
@@ -115,16 +110,15 @@ pub type PixelPen = Pen<CanvasUnattachedMarker<PixelColor>>;
 impl<Co> Pen<CanvasUnattachedMarker<Co>> {
     #[must_use = "This function returns a new attached pen."]
     pub fn attach<
-        'c,
         const H: usize,
         const W: usize,
         P: PixelMutInterface,
         C: PixelCanvasMutInterface<H, W, P>,
     >(
         self,
-        canvas: &'c mut C,
+        canvas: &mut C,
         start_pos: impl IntoPixelStrictPosition<H, W>,
-    ) -> Pen<CanvasAttachedMarker<'c, H, W, P, C>>
+    ) -> Pen<CanvasAttachedMarker<'_, H, W, P, C>>
     where
         <P as PixelInterface>::ColorType: From<Co>,
     {
@@ -137,13 +131,8 @@ impl<Co> Pen<CanvasUnattachedMarker<Co>> {
     }
 }
 
-impl<
-        'c,
-        const H: usize,
-        const W: usize,
-        P: PixelMutInterface,
-        C: PixelCanvasMutInterface<H, W, P>,
-    > Pen<CanvasAttachedMarker<'c, H, W, P, C>>
+impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInterface<H, W, P>>
+    Pen<CanvasAttachedMarker<'_, H, W, P, C>>
 {
     #[must_use = "This function returns a new unattached pen."]
     pub fn detach(self) -> Pen<CanvasUnattachedMarker<P::ColorType>> {
@@ -248,7 +237,7 @@ impl<
     }
 
     pub fn branch<B: FnMut(&mut Self) -> &mut Self>(&mut self, mut b: B) -> &mut Self {
-        let pos_before_branching = self.attachment.current_pos.clone();
+        let pos_before_branching = self.attachment.current_pos;
         b(self);
         self.attachment.current_pos = pos_before_branching;
         self

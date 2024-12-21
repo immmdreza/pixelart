@@ -163,26 +163,21 @@ where
     >(
         start_position: PixelStrictPosition<SSH, SSW>,
     ) -> impl Iterator<Item = (PixelStrictPosition<MMH, MMW>, PixelStrictPosition<SSH, SSW>)> {
-        let result = (0..MMH)
-            .into_iter()
-            .map(move |row_offset| {
-                (0..MMW).into_iter().filter_map(move |column_offset| {
-                    start_position
-                        .checked_right(row_offset)
-                        .ok()
-                        .map(|f| f.checked_down(column_offset).ok())
-                        .flatten()
-                        .map(|f| {
-                            (
-                                PixelStrictPosition::<MMH, MMW>::new(row_offset, column_offset)
-                                    .unwrap(),
-                                f,
-                            )
-                        })
-                })
+        (0..MMH).flat_map(move |row_offset| {
+            (0..MMW).filter_map(move |column_offset| {
+                start_position
+                    .checked_right(row_offset)
+                    .ok()
+                    .and_then(|f| f.checked_down(column_offset).ok())
+                    .map(|f| {
+                        (
+                            PixelStrictPosition::<MMH, MMW>::new(row_offset, column_offset)
+                                .unwrap(),
+                            f,
+                        )
+                    })
             })
-            .flatten();
-        result
+        })
     }
 
     fn _read_source<const MMH: usize, const MMW: usize>(
@@ -225,12 +220,10 @@ where
             if self.partition_table()[part_position].has_color() {
                 if let Some(color) = &chosen_color {
                     self.source_table.table_mut()[source_position].update_color(color.clone());
-                } else {
-                    if let Ok(color) = SP::ColorType::try_from(
-                        self.partition_snapshot_table[part_position].color().clone(),
-                    ) {
-                        self.source_table.table_mut()[source_position].update_color(color);
-                    }
+                } else if let Ok(color) = SP::ColorType::try_from(
+                    self.partition_snapshot_table[part_position].color().clone(),
+                ) {
+                    self.source_table.table_mut()[source_position].update_color(color);
                 }
             }
         }

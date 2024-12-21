@@ -59,7 +59,7 @@ impl PixelAnimationBuilder {
     {
         let mut encoder = GifEncoder::new(File::create(path).unwrap());
         encoder.set_repeat(self.repeat)?;
-        let frames = self.images.into_iter().map(|f| Frame::new(f));
+        let frames = self.images.into_iter().map(Frame::new);
         encoder.encode_frames(frames)?;
         Ok(())
     }
@@ -321,6 +321,12 @@ impl<C> AnimationFrameFinisherEmpty<C> {
     }
 }
 
+impl<C> Default for AnimationFrameFinisherEmpty<C> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<C> AnimationFrameFinisher<C> for AnimationFrameFinisherEmpty<C> {
     fn run_finisher(&self, _ctx: &mut C, _i: u16) {
         // :)
@@ -345,7 +351,7 @@ pub struct Animation<
 }
 
 impl<
-        FI,
+        F,
         C: AnimatedContext<H, W, P>,
         const H: usize,
         const W: usize,
@@ -353,11 +359,11 @@ impl<
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
-    > Animation<C, H, W, P, B, S, U, AnimationFrameFinisherHolder<C, FI>>
+    > Animation<C, H, W, P, B, S, U, AnimationFrameFinisherHolder<C, F>>
 where
-    FI: FnOnce(&mut C, u16) + Copy,
+    F: FnOnce(&mut C, u16) + Copy,
 {
-    pub fn new_with_finisher(context_builder: B, setup: S, updater: U, finisher: FI) -> Self {
+    pub fn new_with_finisher(context_builder: B, setup: S, updater: U, finisher: F) -> Self {
         Self {
             context_builder,
             updater,
@@ -417,7 +423,7 @@ where
     }
 
     fn finisher(&mut self, ctx: &mut Self::ContextType, i: u16) {
-        (&self.finisher).run_finisher(ctx, i);
+        self.finisher.run_finisher(ctx, i);
     }
 }
 
@@ -459,7 +465,7 @@ mod tests {
         Animation::new_with_finisher(
             || AnimationContext::<5>::new_with_extra(Repeat::Finite(20), BLACK).with_scale(5),
             |ctx| {
-                let current_color = ctx.extra().clone();
+                let current_color = *ctx.extra();
                 ctx.canvas_mut().fill(current_color);
             },
             |ctx, i| {
@@ -472,7 +478,7 @@ mod tests {
                 true
             },
             |ctx, _| {
-                let color = ctx.extra().clone();
+                let color = *ctx.extra();
                 ctx.canvas_mut().fill(color);
             },
         )

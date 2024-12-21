@@ -164,8 +164,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
             TopLayerId::Tag(tag) => self
                 .top_layers
                 .iter()
-                .filter(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag))
-                .next(),
+                .find(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag)),
             TopLayerId::Index(index) => self.top_layers.get(index),
         }
     }
@@ -179,8 +178,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
             TopLayerId::Tag(tag) => self
                 .top_layers
                 .iter_mut()
-                .filter(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag))
-                .next(),
+                .find(|x| x.layer_tag.as_ref().is_some_and(|x| x == &tag)),
             TopLayerId::Index(index) => self.top_layers.get_mut(index),
         }
     }

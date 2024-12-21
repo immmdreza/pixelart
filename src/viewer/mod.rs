@@ -23,7 +23,7 @@ use crate::prelude::{MaybePixel, PixelCanvas};
 
 pub type ViewResult = eframe::Result;
 
-const PIXELART_ICON: LazyLock<IconData> = LazyLock::new(|| get_icon());
+static PIXELART_ICON: LazyLock<IconData> = LazyLock::new(get_icon);
 
 fn get_icon() -> IconData {
     let mut canvas = PixelCanvas::<20, 20, MaybePixel>::default();
