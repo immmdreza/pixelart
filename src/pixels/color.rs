@@ -53,9 +53,9 @@ pub trait PixelColorInterface {
 /// The default value is White (`u8::MAX` for all) and not Black (`u8::MIN` for all).
 #[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
 pub struct PixelColor {
-    r: u8,
-    g: u8,
-    b: u8,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 
 impl RgbaInterface for PixelColor {

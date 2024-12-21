@@ -127,24 +127,48 @@ pub trait AnimatedContext<const H: usize, const W: usize, P: PixelInterface> {
     }
 }
 
+pub struct WithExtra<Extra>(Extra);
+pub struct WithoutExtra;
+
 #[derive(Debug)]
-pub struct AnimationContext<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
+pub struct AnimationContext<
+    const H: usize,
+    const W: usize = H,
+    P: PixelInterface = Pixel,
+    Extra = WithoutExtra,
+> {
     frames: Repeat,
     pub builder: PixelAnimationBuilder,
     pub canvas: PixelCanvas<H, W, P>,
+    extra: Extra,
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P> {
-    pub fn new(repeat: Repeat) -> Self
+impl<Extra, const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P, Extra> {
+    pub fn new(repeat: Repeat) -> AnimationContext<H, W, P, WithoutExtra>
     where
         <P as PixelInterface>::ColorType: std::default::Default,
         <P as PixelInterface>::ColorType: Clone,
         P: PixelInitializer,
     {
-        Self {
+        AnimationContext::<H, W, P, WithoutExtra> {
             frames: repeat,
             builder: Default::default(),
             canvas: Default::default(),
+            extra: WithoutExtra,
+        }
+    }
+
+    pub fn new_with_extra<E>(repeat: Repeat, extra: E) -> AnimationContext<H, W, P, WithExtra<E>>
+    where
+        <P as PixelInterface>::ColorType: std::default::Default,
+        <P as PixelInterface>::ColorType: Clone,
+        P: PixelInitializer,
+    {
+        AnimationContext::<H, W, P, WithExtra<E>> {
+            frames: repeat,
+            builder: Default::default(),
+            canvas: Default::default(),
+            extra: WithExtra::<E>(extra),
         }
     }
 
@@ -167,8 +191,18 @@ impl<const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> AnimatedContext<H, W, P>
-    for AnimationContext<H, W, P>
+impl<const H: usize, const W: usize, P: PixelInterface, E> AnimationContext<H, W, P, WithExtra<E>> {
+    pub fn extra(&self) -> &E {
+        &self.extra.0
+    }
+
+    pub fn extra_mut(&mut self) -> &mut E {
+        &mut self.extra.0
+    }
+}
+
+impl<const H: usize, const W: usize, P: PixelInterface, E> AnimatedContext<H, W, P>
+    for AnimationContext<H, W, P, E>
 {
     fn frame_count(&self) -> &Repeat {
         &self.frames
@@ -199,9 +233,16 @@ where
 
     fn create_context(&mut self) -> Self::ContextType;
 
+    /// Runs once before the beginning of the main loop
     fn setup(&mut self, ctx: &mut Self::ContextType);
+
+    /// Runs for each frame.
     fn update(&mut self, ctx: &mut Self::ContextType, i: u16) -> bool;
 
+    /// Optional: Runs for each frame and at the end of it (after update, before capturing frame).
+    fn finisher(&mut self, _ctx: &mut Self::ContextType, _i: u16) {}
+
+    /// Run the main loop to create animation.
     fn create(&mut self) -> <Self as Animated<H, W, P>>::ContextType {
         let mut ctx = self.create_context();
         self.setup(&mut ctx);
@@ -209,6 +250,7 @@ where
             Repeat::Finite(frame_count) => {
                 for i in 0..*frame_count {
                     if self.update(&mut ctx, i) {
+                        self.finisher(&mut ctx, i);
                         ctx.capture();
                     } else {
                         break;
@@ -219,6 +261,7 @@ where
                 let mut i = 0;
                 loop {
                     if self.update(&mut ctx, i) {
+                        self.finisher(&mut ctx, i);
                         ctx.capture();
                         i += 1;
                     } else {
@@ -232,6 +275,58 @@ where
     }
 }
 
+pub trait AnimationFrameFinisher<C> {
+    fn run_finisher(&self, ctx: &mut C, i: u16);
+}
+
+#[derive(Clone, Copy)]
+pub struct AnimationFrameFinisherHolder<C, F>
+where
+    F: FnOnce(&mut C, u16) + Copy,
+{
+    finisher: F,
+    _phantom: PhantomData<C>,
+}
+
+impl<C, F> AnimationFrameFinisherHolder<C, F>
+where
+    F: FnOnce(&mut C, u16) + Copy,
+{
+    pub fn new(finisher: F) -> Self {
+        Self {
+            finisher,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<F, C> AnimationFrameFinisher<C> for AnimationFrameFinisherHolder<C, F>
+where
+    F: FnOnce(&mut C, u16) + Copy,
+{
+    fn run_finisher(&self, ctx: &mut C, i: u16) {
+        (self.finisher)(ctx, i)
+    }
+}
+
+pub struct AnimationFrameFinisherEmpty<C> {
+    _phantom: PhantomData<C>,
+}
+
+impl<C> AnimationFrameFinisherEmpty<C> {
+    pub fn new() -> Self {
+        Self {
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<C> AnimationFrameFinisher<C> for AnimationFrameFinisherEmpty<C> {
+    fn run_finisher(&self, _ctx: &mut C, _i: u16) {
+        // :)
+    }
+}
+
 pub struct Animation<
     C: AnimatedContext<H, W, P>,
     const H: usize,
@@ -240,14 +335,17 @@ pub struct Animation<
     B: FnOnce() -> C + Copy,
     S: FnOnce(&mut C) + Copy,
     U: FnOnce(&mut C, u16) -> bool + Copy,
+    F: AnimationFrameFinisher<C> = AnimationFrameFinisherEmpty<C>,
 > {
     context_builder: B,
     updater: U,
     setup: S,
+    finisher: F,
     _phantom: PhantomData<(C, P)>,
 }
 
 impl<
+        FI,
         C: AnimatedContext<H, W, P>,
         const H: usize,
         const W: usize,
@@ -255,13 +353,16 @@ impl<
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
-    > Animation<C, H, W, P, B, S, U>
+    > Animation<C, H, W, P, B, S, U, AnimationFrameFinisherHolder<C, FI>>
+where
+    FI: FnOnce(&mut C, u16) + Copy,
 {
-    pub fn new(context_builder: B, setup: S, updater: U) -> Self {
+    pub fn new_with_finisher(context_builder: B, setup: S, updater: U, finisher: FI) -> Self {
         Self {
             context_builder,
             updater,
             setup,
+            finisher: AnimationFrameFinisherHolder::new(finisher),
             _phantom: PhantomData,
         }
     }
@@ -275,7 +376,29 @@ impl<
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
-    > Animated<H, W, P> for Animation<C, H, W, P, B, S, U>
+    > Animation<C, H, W, P, B, S, U, AnimationFrameFinisherEmpty<C>>
+{
+    pub fn new(context_builder: B, setup: S, updater: U) -> Self {
+        Self {
+            context_builder,
+            updater,
+            setup,
+            finisher: AnimationFrameFinisherEmpty::new(),
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<
+        C: AnimatedContext<H, W, P>,
+        const H: usize,
+        const W: usize,
+        P: PixelInterface,
+        B: FnOnce() -> C + Copy,
+        S: FnOnce(&mut C) + Copy,
+        U: FnOnce(&mut C, u16) -> bool + Copy,
+        F: AnimationFrameFinisher<C>,
+    > Animated<H, W, P> for Animation<C, H, W, P, B, S, U, F>
 where
     <P as PixelInterface>::ColorType: RgbaInterface,
 {
@@ -291,6 +414,10 @@ where
 
     fn update(&mut self, ctx: &mut Self::ContextType, i: u16) -> bool {
         (self.updater)(ctx, i)
+    }
+
+    fn finisher(&mut self, ctx: &mut Self::ContextType, i: u16) {
+        (&self.finisher).run_finisher(ctx, i);
     }
 }
 
@@ -329,17 +456,24 @@ mod tests {
 
     #[test]
     fn feature() {
-        Animation::new(
-            || AnimationContext::<5>::new(Repeat::Finite(10)).with_scale(5),
+        Animation::new_with_finisher(
+            || AnimationContext::<5>::new_with_extra(Repeat::Finite(20), BLACK).with_scale(5),
             |ctx| {
-                ctx.canvas_mut().fill(BLACK);
+                let current_color = ctx.extra().clone();
+                ctx.canvas_mut().fill(current_color);
             },
             |ctx, i| {
-                let new_color = ctx.canvas()[TOP_LEFT]
-                    .color()
-                    .map_all(|x| x + (i as u8 * 5));
-                ctx.canvas_mut().fill(new_color);
+                let color = ctx.extra_mut();
+                let increase_factor = i as u8;
+                color.r += increase_factor;
+                color.g += increase_factor;
+                color.b += increase_factor;
+
                 true
+            },
+            |ctx, _| {
+                let color = ctx.extra().clone();
+                ctx.canvas_mut().fill(color);
             },
         )
         .create()
