@@ -30,7 +30,7 @@ impl Default for PixelAnimationBuilder {
     fn default() -> Self {
         Self {
             repeat: Repeat::Infinite,
-            scale: Default::default(),
+            scale: 1,
             images: Default::default(),
         }
     }
