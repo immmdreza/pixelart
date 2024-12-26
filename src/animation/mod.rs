@@ -16,6 +16,7 @@ pub use image::codecs::gif::Repeat;
 #[cfg(feature = "viewer")]
 use crate::viewer::{view, ViewResult};
 
+pub mod beautiful;
 pub mod layered;
 pub mod simple;
 
@@ -282,7 +283,7 @@ pub trait AnimationFrameFinisher<C> {
 #[derive(Clone, Copy)]
 pub struct AnimationFrameFinisherHolder<C, F>
 where
-    F: FnOnce(&mut C, u16) + Copy,
+    F: Fn(&mut C, u16),
 {
     finisher: F,
     _phantom: PhantomData<C>,
@@ -290,7 +291,7 @@ where
 
 impl<C, F> AnimationFrameFinisherHolder<C, F>
 where
-    F: FnOnce(&mut C, u16) + Copy,
+    F: Fn(&mut C, u16),
 {
     pub fn new(finisher: F) -> Self {
         Self {
@@ -302,7 +303,7 @@ where
 
 impl<F, C> AnimationFrameFinisher<C> for AnimationFrameFinisherHolder<C, F>
 where
-    F: FnOnce(&mut C, u16) + Copy,
+    F: Fn(&mut C, u16),
 {
     fn run_finisher(&self, ctx: &mut C, i: u16) {
         (self.finisher)(ctx, i)
@@ -361,7 +362,7 @@ impl<
         U: FnOnce(&mut C, u16) -> bool + Copy,
     > Animation<C, H, W, P, B, S, U, AnimationFrameFinisherHolder<C, F>>
 where
-    F: FnOnce(&mut C, u16) + Copy,
+    F: Fn(&mut C, u16),
 {
     pub fn new_with_finisher(context_builder: B, setup: S, updater: U, finisher: F) -> Self {
         Self {
