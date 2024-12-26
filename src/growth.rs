@@ -22,7 +22,7 @@ fn create_and_save_canvas_of_size<const H: usize, const W: usize>() {
 fn create_and_save_maybe_canvas_of_size<const H: usize, const W: usize>() {
     let mut px = PixelCanvas::<H, W, MaybePixel>::default();
 
-    px.draw(CENTER, square::<1>(BLACK));
+    px.draw(CENTER, square::<1>(RED));
     px.default_image_builder()
         .save("arts/maybe_growth.png")
         .unwrap();
