@@ -1,8 +1,5 @@
 use crate::pixels::{
-    position::{
-        IntoPixelStrictPosition, PixelPositionInterface, PixelStrictPositionInterface,
-        StrictPositions,
-    },
+    position::{IntoPixelStrictPosition, PixelStrictPositionInterface, StrictPositions},
     PixelInterface, PixelMutInterface,
 };
 
@@ -68,13 +65,15 @@ pub fn draw_canvas_on<
     P::ColorType: TryFrom<MP::ColorType, Error = E>,
 {
     let start_pos = start_pos.into_pixel_strict_position();
-    for pixel in me.iter_pixels().filter(|f| f.has_color()) {
-        if let Ok(Ok(pos_on_canvas)) = start_pos
-            .checked_down(pixel.position().row())
-            .map(|res| res.checked_right(pixel.position().column()))
-        {
-            if let Ok(color) = P::ColorType::try_from(pixel.color().clone()) {
-                canvas.table_mut()[pos_on_canvas].update_color(color);
+    for (row, pixel_row) in me.iter().enumerate() {
+        for (column, pixel) in pixel_row.iter().filter(|f| f.has_color()).enumerate() {
+            if let Ok(Ok(pos_on_canvas)) = start_pos
+                .checked_down(row)
+                .map(|res| res.checked_right(column))
+            {
+                if let Ok(color) = P::ColorType::try_from(pixel.color().clone()) {
+                    canvas.table_mut()[pos_on_canvas].update_color(color);
+                }
             }
         }
     }
@@ -121,7 +120,7 @@ mod tests {
         pixels::{
             canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt},
             color::{PixelColor, PixelColorExt},
-            position::{PixelStrictPosition, StrictPositions},
+            position::{PixelPositionInterface, PixelStrictPosition, StrictPositions},
             PixelIterExt, PixelIterMutExt,
         },
         prelude::MaybePixel,

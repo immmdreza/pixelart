@@ -12,7 +12,7 @@ use super::{
     position::{
         IntoPixelStrictPosition, PixelStrictPositionInterface, SingleCycle, MAIN_DIRECTIONS,
     },
-    Pixel, PixelInitializer, PixelInterface, PixelMutInterface, PixelMutPosition,
+    Pixel, PixelInitializer, PixelInterface, PixelMutInterface,
 };
 
 pub mod drawable;
@@ -53,11 +53,10 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvas<H, W, P> {
     #[must_use = "This function returns a new table."]
     pub fn flip_x(&mut self) -> PixelCanvas<H, W, P>
     where
-        P: PixelMutPosition + Clone,
+        P: Clone,
     {
         let mut canvas = self.clone();
         canvas.rows.reverse();
-        canvas.sync_positions();
         canvas
     }
 
@@ -65,11 +64,10 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelCanvas<H, W, P> {
     #[must_use = "This function returns a new table."]
     pub fn flip_y(&mut self) -> PixelCanvas<H, W, P>
     where
-        P: PixelMutPosition + Clone,
+        P: Clone,
     {
         let mut canvas = self.clone();
         canvas.iter_mut().for_each(|row| row.reverse());
-        canvas.sync_positions();
         canvas
     }
 }

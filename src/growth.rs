@@ -1,6 +1,8 @@
 #![cfg(test)]
 #![cfg(debug_assertions)]
 
+use std::any::Any;
+
 use image::codecs::gif::Repeat;
 use rand::{rngs::ThreadRng, Rng};
 
@@ -31,7 +33,7 @@ fn random_canvas() {
     let mut rng = ThreadRng::default();
     let mut px = PixelCanvas::<109>::default();
 
-    px.iter_pixels_mut().for_each(|pixel| {
+    px.iter_pixels_mut().for_each(|mut pixel| {
         pixel.update_color(PixelColor::new(rng.gen(), rng.gen(), rng.gen()));
     });
 
@@ -46,13 +48,13 @@ fn random_animation() {
         || AnimationContext::<50>::new_with_extra(Repeat::Finite(10), ThreadRng::default()),
         |ctx| {
             let mut rng = rng.clone();
-            ctx.canvas.iter_pixels_mut().for_each(|pixel| {
+            ctx.canvas.iter_pixels_mut().for_each(|mut pixel| {
                 pixel.update_color(PixelColor::new(rng.gen(), rng.gen(), rng.gen()));
             });
         },
         |ctx, _i| {
             let mut rng = rng.clone();
-            ctx.canvas.iter_pixels_mut().for_each(|pixel| {
+            ctx.canvas.iter_pixels_mut().for_each(|mut pixel| {
                 pixel.update_color(PixelColor::new(rng.gen(), rng.gen(), rng.gen()));
             });
 
@@ -63,4 +65,11 @@ fn random_animation() {
     .builder
     .save("arts/random_animation.gif")
     .unwrap();
+}
+
+#[test]
+fn size() {
+    let test: [Box<dyn Any>; 2] = [Box::new("10usize".to_string()), Box::new(10usize)];
+
+    println!("{}", size_of_val(&test))
 }

@@ -11,7 +11,9 @@ use imageproc::{
 
 use crate::{
     pixels::{
-        canvas::PixelCanvasInterface, color::RgbaInterface, position::PixelPositionInterface,
+        canvas::PixelCanvasInterface,
+        color::RgbaInterface,
+        position::{PixelPosition, PixelPositionInterface},
         PixelInterface,
     },
     prelude::PixelColor,
@@ -117,12 +119,11 @@ where
     }
 
     /// Draws a pixel with its border.
-    fn draw_pixel_on_image(&self, pixel: &P, image: &mut DefaultImageBuffer)
+    fn draw_pixel_on_image(&self, pos: PixelPosition, pixel: &P, image: &mut DefaultImageBuffer)
     where
         P::ColorType: RgbaInterface,
     {
         // Draw pixel border
-        let pos = pixel.position();
         let row = pos.row();
         let column = pos.column();
 
@@ -181,9 +182,9 @@ where
     {
         let table = self.canvas_ref.table();
 
-        for row in table.iter() {
-            for pixel in row.iter().filter(|p| p.has_color()) {
-                self.draw_pixel_on_image(pixel, image)
+        for (row, pixel_row) in table.iter().enumerate() {
+            for (column, pixel) in pixel_row.iter().filter(|p| p.has_color()).enumerate() {
+                self.draw_pixel_on_image(PixelPosition::new(row, column), pixel, image)
             }
         }
     }

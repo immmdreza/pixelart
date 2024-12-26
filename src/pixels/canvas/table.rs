@@ -9,7 +9,7 @@ use crate::pixels::{
         IntoPixelStrictPosition, PixelPosition, PixelPositionInterface,
         PixelStrictPositionInterface,
     },
-    Pixel, PixelInitializer, PixelInterface, PixelMutPosition,
+    Pixel, PixelData, PixelInitializer, PixelInterface,
 };
 
 use super::row::PixelRow;
@@ -18,16 +18,6 @@ use super::row::PixelRow;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PixelTable<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
     pub(crate) rows: [PixelRow<W, P>; H],
-}
-
-#[allow(private_bounds)]
-impl<const H: usize, const W: usize, P: PixelMutPosition + PixelInterface> PixelTable<H, W, P> {
-    pub(crate) fn sync_positions(&mut self) {
-        self.iter_mut().enumerate().for_each(|(row, pix_row)| {
-            pix_row.row = row;
-            pix_row.sync_positions()
-        })
-    }
 }
 
 impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for PixelTable<H, W, P> {
@@ -42,7 +32,7 @@ impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for Pi
 impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> PixelTable<H, W, P> {
     pub fn new(fill_color: impl Into<P::ColorType> + Clone) -> Self {
         Self {
-            rows: array::from_fn(|row| PixelRow::new(row, fill_color.clone())),
+            rows: array::from_fn(|_| PixelRow::new(fill_color.clone())),
         }
     }
 }
@@ -94,8 +84,16 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///     println!("{:?}", pix.position())
     /// }
     /// ```
-    pub fn iter_pixels(&self) -> impl Iterator<Item = &P> {
-        self.iter().flat_map(|f| f.iter())
+    pub fn iter_pixels<'p>(&'p self) -> impl Iterator<Item = PixelData<&'p P>>
+    where
+        &'p P: PixelInterface,
+    {
+        self.iter().enumerate().flat_map(|(row, f)| {
+            f.iter().enumerate().map(move |(col, f)| PixelData {
+                pixel: f,
+                position: PixelPosition::new(row, col),
+            })
+        })
     }
 
     /// Use this type to iterate over mutable ref of the pixels.
@@ -110,8 +108,16 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     ///     println!("{:?}", pix.position())
     /// }
     /// ```
-    pub fn iter_pixels_mut(&mut self) -> impl Iterator<Item = &mut P> {
-        self.iter_mut().flat_map(|f| f.iter_mut())
+    pub fn iter_pixels_mut<'p>(&'p mut self) -> impl Iterator<Item = PixelData<&'p mut P>>
+    where
+        &'p mut P: PixelInterface,
+    {
+        self.iter_mut().enumerate().flat_map(|(row, f)| {
+            f.iter_mut().enumerate().map(move |(col, f)| PixelData {
+                pixel: f,
+                position: PixelPosition::new(row, col),
+            })
+        })
     }
 
     /// Calls a closure on each read-only ref pixel of this table.
@@ -250,7 +256,7 @@ mod pixel_table_tests {
     fn iter_pixels() {
         let mut table = PixelTable::<2>::default();
         for pix in table.iter_pixels() {
-            println!("{:?}", pix.position)
+            println!("{:?}", pix)
         }
 
         for pix in table.iter_pixels_mut() {

@@ -3,7 +3,9 @@
 
 use std::fmt::Display;
 
-use self::{color::PixelColor, position::PixelPosition};
+use position::PixelPosition;
+
+use self::color::PixelColor;
 
 pub mod canvas;
 pub mod color;
@@ -11,7 +13,7 @@ pub mod maybe;
 pub mod position;
 
 pub trait PixelInitializer: PixelInterface {
-    fn new(color: impl Into<Self::ColorType>, position: impl Into<PixelPosition>) -> Self;
+    fn new(color: impl Into<Self::ColorType>) -> Self;
 }
 
 pub trait PixelInterface {
@@ -22,9 +24,6 @@ pub trait PixelInterface {
 
     /// Get the current [`PixelColor`] of this [`Pixel`].
     fn color(&self) -> &Self::ColorType;
-
-    /// Get the [`PixelPosition`] of this [`Pixel`].
-    fn position(&self) -> &PixelPosition;
 }
 
 pub trait PixelMutInterface: PixelInterface {
@@ -34,27 +33,14 @@ pub trait PixelMutInterface: PixelInterface {
     fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType;
 }
 
-pub(crate) trait PixelMutPosition {
-    fn update_position(&mut self, pos: PixelPosition);
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pixel {
     pub color: PixelColor,
-
-    /// Can't be changed.
-    position: PixelPosition,
-}
-
-impl PixelMutPosition for Pixel {
-    fn update_position(&mut self, pos: PixelPosition) {
-        self.position = pos;
-    }
 }
 
 impl Display for Pixel {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "pixel({}, {})", self.color, self.position)
+        write!(f, "pixel({})", self.color)
     }
 }
 
@@ -63,10 +49,6 @@ impl PixelInterface for Pixel {
 
     fn color(&self) -> &PixelColor {
         &self.color
-    }
-
-    fn position(&self) -> &PixelPosition {
-        &self.position
     }
 
     fn has_color(&self) -> bool {
@@ -87,10 +69,6 @@ impl PixelInterface for &Pixel {
         &self.color
     }
 
-    fn position(&self) -> &PixelPosition {
-        &self.position
-    }
-
     fn has_color(&self) -> bool {
         true
     }
@@ -101,10 +79,6 @@ impl PixelInterface for &mut Pixel {
 
     fn color(&self) -> &PixelColor {
         &self.color
-    }
-
-    fn position(&self) -> &PixelPosition {
-        &self.position
     }
 
     fn has_color(&self) -> bool {
@@ -119,10 +93,9 @@ impl PixelMutInterface for &mut Pixel {
 }
 
 impl PixelInitializer for Pixel {
-    fn new(color: impl Into<PixelColor>, position: impl Into<PixelPosition>) -> Self {
+    fn new(color: impl Into<PixelColor>) -> Self {
         Self {
             color: color.into(),
-            position: position.into(),
         }
     }
 }
@@ -141,25 +114,25 @@ where
 }
 
 /// A set of extension methods for a shared (owned, ref, mut) iterator over [`Pixel`]s.
-pub trait PixelIterExt<Item: PixelInterface>: Iterator<Item = Item> {
+pub trait PixelIterExt<P: PixelInterface>: Iterator<Item = PixelData<P>> {
     /// Filter pixels using their [`PixelColor`].
     fn filter_color(
         self,
-        color: impl Into<<Self::Item as PixelInterface>::ColorType>,
-    ) -> impl Iterator<Item = Item>
+        color: impl Into<<P as PixelInterface>::ColorType>,
+    ) -> impl Iterator<Item = PixelData<P>>
     where
         Self: Sized,
-        <Item as PixelInterface>::ColorType: PartialEq,
+        <P as PixelInterface>::ColorType: PartialEq,
     {
-        let color: <Self::Item as PixelInterface>::ColorType = color.into();
+        let color: <P as PixelInterface>::ColorType = color.into();
         self.filter(move |pixel| pixel.color() == &color)
     }
 
     /// Filter pixels based on their [`PixelPosition`].
-    fn filter_position<P>(self, mut predicate: P) -> impl Iterator<Item = Item>
+    fn filter_position<F>(self, mut predicate: F) -> impl Iterator<Item = PixelData<P>>
     where
         Self: Sized,
-        P: FnMut(&PixelPosition) -> bool,
+        F: FnMut(&PixelPosition) -> bool,
     {
         self.filter(move |pixel| predicate(pixel.position()))
     }
@@ -169,7 +142,7 @@ pub trait PixelIterExt<Item: PixelInterface>: Iterator<Item = Item> {
 // impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
 // impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
 
-impl<T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = P> {}
+impl<T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = PixelData<P>> {}
 
 /// A set of extension methods for a mutable only iterator over [`Pixel`]s.
 pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
@@ -187,3 +160,33 @@ pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
 }
 
 impl<T, P: PixelMutInterface> PixelIterMutExt<'_, P> for T where T: Iterator<Item = P> {}
+
+#[derive(Debug)]
+pub struct PixelData<P: PixelInterface> {
+    pub pixel: P,
+    position: PixelPosition,
+}
+
+impl<P: PixelMutInterface> PixelMutInterface for PixelData<P> {
+    fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType {
+        self.pixel.update_color(color)
+    }
+}
+
+impl<P: PixelInterface> PixelInterface for PixelData<P> {
+    type ColorType = P::ColorType;
+
+    fn has_color(&self) -> bool {
+        self.pixel.has_color()
+    }
+
+    fn color(&self) -> &Self::ColorType {
+        self.pixel.color()
+    }
+}
+
+impl<P: PixelInterface> PixelData<P> {
+    pub fn position(&self) -> &PixelPosition {
+        &self.position
+    }
+}

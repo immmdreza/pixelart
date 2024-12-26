@@ -4,28 +4,20 @@ use super::{
         SharedPixelCanvasExt,
     },
     color::PixelColor,
-    position::{PixelPosition, PixelStrictPositionInterface},
-    PixelInitializer, PixelInterface, PixelMutInterface, PixelMutPosition,
+    position::PixelStrictPositionInterface,
+    PixelData, PixelInitializer, PixelInterface, PixelMutInterface,
 };
 
 /// A pixel that may not have any effect on the color at this position.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MaybePixel {
     pub color: Option<PixelColor>,
-    position: PixelPosition,
-}
-
-impl PixelMutPosition for MaybePixel {
-    fn update_position(&mut self, pos: PixelPosition) {
-        self.position = pos;
-    }
 }
 
 impl PixelInitializer for MaybePixel {
-    fn new(color: impl Into<Option<PixelColor>>, position: impl Into<PixelPosition>) -> Self {
+    fn new(color: impl Into<Option<PixelColor>>) -> Self {
         Self {
             color: color.into(),
-            position: position.into(),
         }
     }
 }
@@ -54,10 +46,6 @@ impl PixelInterface for MaybePixel {
     fn color(&self) -> &Self::ColorType {
         &self.color
     }
-
-    fn position(&self) -> &super::position::PixelPosition {
-        &self.position
-    }
 }
 
 impl PixelInterface for &MaybePixel {
@@ -70,10 +58,6 @@ impl PixelInterface for &MaybePixel {
     fn color(&self) -> &Self::ColorType {
         &self.color
     }
-
-    fn position(&self) -> &super::position::PixelPosition {
-        &self.position
-    }
 }
 
 impl PixelInterface for &mut MaybePixel {
@@ -85,10 +69,6 @@ impl PixelInterface for &mut MaybePixel {
 
     fn color(&self) -> &Self::ColorType {
         &self.color
-    }
-
-    fn position(&self) -> &super::position::PixelPosition {
-        &self.position
     }
 }
 
@@ -107,7 +87,7 @@ impl PixelInterface for &mut MaybePixel {
 pub trait MaybePixelCanvasExt<const H: usize, const W: usize>:
     SharedPixelCanvasExt<H, W, MaybePixel>
 {
-    fn iter_existing_pixels(&self) -> impl Iterator<Item = &MaybePixel> {
+    fn iter_existing_pixels(&self) -> impl Iterator<Item = PixelData<&MaybePixel>> {
         self.table().iter_pixels().filter(|p| p.has_color())
     }
 }
