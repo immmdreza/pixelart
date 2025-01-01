@@ -287,19 +287,22 @@ where
     P: std::cmp::PartialEq + std::clone::Clone + std::default::Default + Default,
 {
     fn drop(&mut self) {
-        let current = self.current.take().unwrap_or(P::default());
-
-        if &current != &self.inner.default {
-            if let Some(item) = self.inner.inner.get_mut(&self.index) {
-                item.value = current;
-            } else {
-                self.inner
-                    .inner
-                    .insert(self.index, IllusionItem { value: current });
+        if let Some(current) = self.current.take() {
+            if &current != &self.inner.default {
+                if let Some(item) = self.inner.inner.get_mut(&self.index) {
+                    item.value = current;
+                } else {
+                    self.inner
+                        .inner
+                        .insert(self.index, IllusionItem { value: current });
+                }
             }
-        } else {
-            // Item is now default! clean up
-            self.inner.inner.remove(&self.index);
+        }
+
+        if let Some(item) = self.inner.inner.get(&self.index) {
+            if &item.value == &self.inner.default {
+                self.inner.inner.remove(&self.index);
+            }
         }
     }
 }

@@ -1,7 +1,8 @@
 use pixelart::{
     animation::{simple::create_simple_animation, Repeat},
     pixels::canvas::{
-        templates::alien_monster::AlienMonster, SharedMutPixelCanvasExt, SharedPixelCanvasExt,
+        templates::{alien_monster::AlienMonster, heart::Heart, Template},
+        SharedMutPixelCanvasExt, SharedPixelCanvasExt,
     },
     prelude::*,
     viewer::view,
@@ -13,7 +14,12 @@ pub mod pen;
 pub mod template;
 
 fn main() {
-    partition::moving_plus();
+    // partition::moving_plus();
+    Heart
+        .create()
+        .default_image_builder()
+        .save("arts/heart.png")
+        .unwrap();
 }
 
 #[allow(dead_code)]

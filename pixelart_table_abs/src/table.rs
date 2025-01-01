@@ -174,6 +174,10 @@ where
     }
 
     pub fn swap(&mut self, a: (usize, usize), b: (usize, usize)) {
+        if a == b {
+            return;
+        }
+
         let a_exists = self.inner.find_raw_mut(a).is_some();
         let b_exists = self.inner.find_raw_mut(b).is_some();
 
@@ -198,7 +202,7 @@ where
         } else if a_exists {
             // Take out a and replace to b
             replace(a, b);
-        } else {
+        } else if b_exists {
             // Take out b and replace to a
             replace(b, a);
         }
@@ -394,37 +398,40 @@ where
     P: std::cmp::PartialEq + std::clone::Clone + Default,
 {
     fn drop(&mut self) {
-        let current = self.current.take().unwrap_or(P::default());
-
-        if &current != &self.inner.default {
-            if let Some(row) = self.inner.inner.inner.inner.get_mut(&self.index.0) {
-                if let Some(item) = row.value.inner.inner.get_mut(&self.index.1) {
-                    item.value = current;
+        if let Some(current) = self.current.take() {
+            if &current != &self.inner.default {
+                if let Some(row) = self.inner.inner.inner.inner.get_mut(&self.index.0) {
+                    if let Some(item) = row.value.inner.inner.get_mut(&self.index.1) {
+                        item.value = current;
+                    } else {
+                        // Row exists but item doesn't
+                        // Add a new item
+                        row.value
+                            .inner
+                            .inner
+                            .insert(self.index.1, IllusionItem { value: current });
+                    }
                 } else {
-                    // Row exists but item doesn't
-                    // Add a new item
-                    row.value
-                        .inner
+                    // Row doesn't exist
+                    // Add a new row and item
+                    let mut row = IllusionArray::<W, P>::default();
+                    row.inner
                         .inner
                         .insert(self.index.1, IllusionItem { value: current });
+                    self.inner
+                        .inner
+                        .inner
+                        .inner
+                        .insert(self.index.0, IllusionItem { value: row });
                 }
-            } else {
-                // Row doesn't exist
-                // Add a new row and item
-                let mut row = IllusionArray::<W, P>::default();
-                row.inner
-                    .inner
-                    .insert(self.index.1, IllusionItem { value: current });
-                self.inner
-                    .inner
-                    .inner
-                    .inner
-                    .insert(self.index.0, IllusionItem { value: row });
             }
-        } else {
-            // remove old since it's now default.
-            if let Some(row) = self.inner.inner.inner.inner.get_mut(&self.index.0) {
-                if row.value.inner.inner.remove(&self.index.1).is_some() {
+        }
+
+        // remove old since it's now default.
+        if let Some(row) = self.inner.inner.inner.inner.get_mut(&self.index.0) {
+            if let Some(item) = row.value.inner.inner.get(&self.index.1) {
+                if item.value == self.inner.default {
+                    row.value.inner.inner.remove(&self.index.1);
                     if row.value.inner.inner.is_empty() {
                         // If an entity is remove and there're no others, clean up.
                         self.inner.inner.inner.inner.remove(&self.index.0);

@@ -30,7 +30,7 @@ impl Template<6, 7> for Heart {
         canvas: &mut C,
     ) {
         canvas.draw(TOP_LEFT, HalfHeart);
-        canvas.draw(TOP_CENTER, HalfHeart.create().flip_y());
+        canvas.draw(TOP_CENTER, HalfHeart.create().flipped_x());
     }
 }
 
@@ -44,6 +44,19 @@ mod tests {
             .create()
             .default_image_builder()
             .save("arts/heart.png")
+            .unwrap();
+    }
+
+    #[test]
+    fn test_duplicated() {
+        let mut canvas = MaybePixelCanvas::<2>::default();
+
+        canvas.get_pixel_mut(TOP_LEFT).update_color(RED);
+        canvas.get_pixel_mut(TOP_LEFT).update_color(RED);
+
+        canvas
+            .default_image_builder()
+            .save("arts/test/duplicated.png")
             .unwrap();
     }
 }

@@ -88,24 +88,46 @@ where
         canvas
     }
 
-    #[allow(private_bounds)]
-    #[must_use = "This function returns a new table."]
-    pub fn flip_x(&mut self) -> PixelCanvas<H, W, P>
-    where
-        P: Clone,
-    {
-        // TODO: using swap
-        todo!()
+    pub fn flip_x(&mut self) -> &mut PixelCanvas<H, W, P> {
+        for row in 0..H {
+            for col in 0..W / 2 {
+                let opposite_col = W - col - 1;
+                self.table.swap((row, col), (row, opposite_col));
+            }
+        }
+
+        self
     }
 
-    #[allow(private_bounds)]
-    #[must_use = "This function returns a new table."]
-    pub fn flip_y(&mut self) -> PixelCanvas<H, W, P>
+    pub fn flipped_x(&self) -> PixelCanvas<H, W, P>
     where
         P: Clone,
+        P::ColorType: Clone,
     {
-        // TODO: using swap
-        todo!()
+        let mut canvas = self.clone();
+        canvas.flip_x();
+        canvas
+    }
+
+    pub fn flip_y(&mut self) -> &mut PixelCanvas<H, W, P> {
+        for row in 0..H / 2 {
+            for col in 0..W {
+                let opposite_row = H - row - 1;
+                self.table.swap((row, col), (opposite_row, col));
+            }
+        }
+
+        self
+    }
+
+    pub fn flipped_y(&self) -> PixelCanvas<H, W, P>
+    where
+        P: Clone,
+        P::ColorType: Clone,
+    {
+        let mut canvas = self.clone();
+        canvas.flip_y();
+        canvas
     }
 }
 
@@ -193,18 +215,20 @@ fn _fill_inside<
     P: PartialEq + Clone,
     P::ColorType: PartialEq + Clone + Default,
 {
-    let pos = point_inside.into_pixel_strict_position();
-    let base_color = base_color.unwrap_or(canvas.table().get_pixel(&pos).color().clone());
+    let mut stack = vec![point_inside.into_pixel_strict_position()];
+    let base_color = base_color.unwrap_or_else(|| canvas.color_at(stack[0]).clone());
+    let color = color.into();
 
-    canvas.update_color_at(pos, color.clone());
+    while let Some(pos) = stack.pop() {
+        if canvas.color_at(pos) == base_color {
+            canvas.update_color_at(pos, color.clone());
 
-    for dir in
-        SingleCycle::new(super::position::Direction::Up).filter(|dir| MAIN_DIRECTIONS.contains(dir))
-    {
-        if let Ok(new_pos) = pos.checked_direction(dir, 1) {
-            if canvas.color_at(new_pos) == base_color {
-                canvas.update_color_at(new_pos, color.clone());
-                _fill_inside(canvas, Some(base_color.clone()), color.clone(), new_pos)
+            for dir in SingleCycle::new(super::position::Direction::Up)
+                .filter(|dir| MAIN_DIRECTIONS.contains(dir))
+            {
+                if let Ok(new_pos) = pos.checked_direction(dir, 1) {
+                    stack.push(new_pos);
+                }
             }
         }
     }
@@ -510,9 +534,11 @@ mod tests {
         canvas.get_pixel_mut(TOP_LEFT).update_color(BLUE);
         canvas.get_pixel_mut(BOTTOM_LEFT).update_color(RED);
         canvas.get_pixel_mut(BOTTOM_RIGHT).update_color(YELLOW);
+        canvas.get_pixel_mut(TOP_RIGHT).update_color(GREEN);
 
         canvas.swap(TOP_LEFT, CENTER);
         canvas.swap(BOTTOM_LEFT, BOTTOM_RIGHT);
+        canvas.swap(TOP_RIGHT, RIGHT_CENTER);
 
         canvas
             .default_image_builder()

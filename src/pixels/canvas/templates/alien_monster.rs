@@ -72,7 +72,10 @@ impl Template<17, 20> for AlienMonster {
         canvas: &mut C,
     ) {
         // Create left side by flipping half monster.
-        canvas.draw(StrictPositions::TopLeft, HalfAlienMonster.create().flip_y());
+        canvas.draw(
+            StrictPositions::TopLeft,
+            HalfAlienMonster.create().flipped_x(),
+        );
         // Right side
         canvas.draw(
             StrictPositions::TopLeft.bounding_right(10),
