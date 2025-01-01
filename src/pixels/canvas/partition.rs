@@ -85,8 +85,8 @@ pub struct CanvasPartition<
     SP,
     MP = MaybePixel,
 > where
-    SP: PixelInterface,
-    MP: PixelInterface,
+    SP: PixelInterface + Default,
+    MP: PixelInterface + Default,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
     position: PixelStrictPosition<SH, SW>,
@@ -100,8 +100,8 @@ impl<const MH: usize, const MW: usize, const SH: usize, const SW: usize, SP, MP,
     Drawable<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 where
     MP::ColorType: Clone,
-    SP: PixelInterface,
-    MP: PixelInterface,
+    SP: PixelInterface + Default,
+    MP: PixelInterface + Default,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn draw_on<const HC: usize, const WC: usize, P, C, E>(
@@ -109,16 +109,19 @@ where
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<HC, WC, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
         for (my_position, source_position) in
             Self::_included_positions::<MH, MW, HC, WC>(start_pos.into_pixel_strict_position())
         {
-            let my_color = self.partition_table[my_position].color().clone();
+            let my_color = self.partition_table.get_pixel(my_position).color().clone();
             if let Ok(my_color) = P::ColorType::try_from(my_color) {
-                canvas.table_mut()[source_position].update_color(my_color);
+                canvas
+                    .table_mut()
+                    .get_pixel_mut(source_position)
+                    .update_color(my_color);
             }
         }
     }
@@ -127,8 +130,8 @@ where
 impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
     PixelCanvasMutInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 where
-    SP: PixelInterface,
-    MP: PixelInterface + PixelMutInterface,
+    SP: PixelInterface + Default,
+    MP: PixelInterface + PixelMutInterface + Default,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn table_mut(&mut self) -> &mut PixelTable<MH, MW, MP> {
@@ -139,8 +142,8 @@ where
 impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
     PixelCanvasInterface<MH, MW, MP> for CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 where
-    SP: PixelInterface,
-    MP: PixelInterface,
+    SP: PixelInterface + Default,
+    MP: PixelInterface + Default,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn table(&self) -> &PixelTable<MH, MW, MP> {
@@ -151,8 +154,8 @@ where
 impl<const SH: usize, const SW: usize, const MH: usize, const MW: usize, SP, MP, I>
     CanvasPartition<MH, MW, SH, SW, I, SP, MP>
 where
-    SP: PixelInterface,
-    MP: PixelInterface,
+    SP: PixelInterface + Default,
+    MP: PixelInterface + Default,
     I: PixelCanvasInterface<SH, SW, SP>,
 {
     fn _included_positions<
@@ -185,22 +188,28 @@ where
         position: PixelStrictPosition<SH, SW>,
     ) -> PixelTable<MMH, MMW, MP>
     where
-        MP: PixelMutInterface + PixelInitializer,
+        MP: PixelMutInterface + PixelInitializer + Clone + PartialEq,
         MP::ColorType: Clone + Default,
         SP::ColorType: Clone,
         MP::ColorType: From<SP::ColorType>,
     {
         let mut partition_table = PixelTable::<MMH, MMW, MP>::default();
         for (my_position, source_position) in Self::_included_positions(position) {
-            let source_color = source_table.table()[source_position].color().clone();
-            partition_table[my_position].update_color(source_color);
+            let source_color = source_table
+                .table()
+                .get_pixel(source_position)
+                .color()
+                .clone();
+            partition_table
+                .get_pixel_mut(my_position)
+                .update_color(source_color);
         }
         partition_table
     }
 
     fn read_source(&mut self) -> PixelTable<MH, MW, MP>
     where
-        MP: PixelMutInterface + PixelInitializer,
+        MP: PixelMutInterface + PixelInitializer + PartialEq + Clone,
         MP::ColorType: Clone + Default,
         SP::ColorType: Clone,
         MP::ColorType: From<SP::ColorType>,
@@ -210,20 +219,29 @@ where
 
     fn set_source_color<E>(&mut self, color: impl Into<Option<SP::ColorType>>)
     where
-        SP: PixelMutInterface,
+        SP: PixelMutInterface + PartialEq + Clone,
         I: PixelCanvasMutInterface<SH, SW, SP>,
         MP::ColorType: Clone,
         SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {
         let chosen_color: Option<SP::ColorType> = color.into();
         for (part_position, source_position) in self.included_positions() {
-            if self.partition_table()[part_position].has_color() {
+            if self.partition_table.get_pixel(part_position).has_color() {
                 if let Some(color) = &chosen_color {
-                    self.source_table.table_mut()[source_position].update_color(color.clone());
+                    self.source_table
+                        .table_mut()
+                        .get_pixel_mut(source_position)
+                        .update_color(color.clone());
                 } else if let Ok(color) = SP::ColorType::try_from(
-                    self.partition_snapshot_table[part_position].color().clone(),
+                    self.partition_snapshot_table
+                        .get_pixel(part_position)
+                        .color()
+                        .clone(),
                 ) {
-                    self.source_table.table_mut()[source_position].update_color(color);
+                    self.source_table
+                        .table_mut()
+                        .get_pixel_mut(source_position)
+                        .update_color(color);
                 }
             }
         }
@@ -232,20 +250,29 @@ where
     pub fn write_source<E>(&mut self)
     where
         I: PixelCanvasMutInterface<SH, SW, SP>,
-        SP: PixelMutInterface,
+        SP: PixelMutInterface + PartialEq + Clone,
         SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
-        MP: PixelMutInterface,
+        MP: PixelMutInterface + PartialEq + Clone,
         MP::ColorType: From<SP::ColorType> + Clone,
     {
         for (my_position, source_position) in self.included_positions() {
-            if self.partition_table[my_position].has_color() {
-                let new_color = self.partition_table[my_position].color().clone();
-                let source_current_color =
-                    self.source_table.table()[source_position].color().clone();
+            if self.partition_table.get_pixel(my_position).has_color() {
+                let new_color = self.partition_table.get_pixel(my_position).color().clone();
+                let source_current_color = self
+                    .source_table
+                    .table()
+                    .get_pixel(source_position)
+                    .color()
+                    .clone();
 
                 if let Ok(new_color) = SP::ColorType::try_from(new_color) {
-                    self.partition_snapshot_table[my_position].update_color(source_current_color);
-                    self.source_table.table_mut()[source_position].update_color(new_color);
+                    self.partition_snapshot_table
+                        .get_pixel_mut(my_position)
+                        .update_color(source_current_color);
+                    self.source_table
+                        .table_mut()
+                        .get_pixel_mut(source_position)
+                        .update_color(new_color);
                 }
             }
         }
@@ -256,7 +283,7 @@ where
         source_table: I,
     ) -> CanvasPartition<MH, MW, SH, SW, I, SP, MP>
     where
-        MP: PixelMutInterface + PixelInitializer,
+        MP: PixelMutInterface + PixelInitializer + PartialEq + Clone,
         MP::ColorType: Clone + Default + From<SP::ColorType>,
         SP::ColorType: Clone,
     {
@@ -278,7 +305,7 @@ where
 
     pub fn update_position(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
     where
-        MP: PixelMutInterface + PixelInitializer,
+        MP: PixelMutInterface + PixelInitializer + PartialEq + Clone,
         MP::ColorType: Clone + Default,
         SP::ColorType: Clone,
         MP::ColorType: From<SP::ColorType>,
@@ -289,9 +316,9 @@ where
 
     pub fn update_color<E>(&mut self, color: impl Into<MP::ColorType> + Clone)
     where
-        MP: PixelMutInterface,
+        MP: PixelMutInterface + PartialEq + Clone,
         MP::ColorType: From<SP::ColorType> + Clone,
-        SP: PixelMutInterface,
+        SP: PixelMutInterface + PartialEq + Clone,
         I: PixelCanvasMutInterface<SH, SW, SP>,
         SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {
@@ -302,10 +329,10 @@ where
     /// .
     pub fn crop_to<E>(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
     where
-        MP: PixelMutInterface,
+        MP: PixelMutInterface + PartialEq + Clone,
         MP::ColorType: From<SP::ColorType> + Clone,
         SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone + Default,
-        SP: PixelMutInterface,
+        SP: PixelMutInterface + PartialEq + Clone,
         I: PixelCanvasMutInterface<SH, SW, SP>,
     {
         self.set_source_color(None);
@@ -316,9 +343,9 @@ where
     /// .
     pub fn copy_to<E>(&mut self, new_position: impl IntoPixelStrictPosition<SH, SW>)
     where
-        MP: PixelMutInterface,
+        MP: PixelMutInterface + PartialEq + Clone,
         MP::ColorType: Clone + From<SP::ColorType>,
-        SP: PixelMutInterface,
+        SP: PixelMutInterface + PartialEq + Clone,
         I: PixelCanvasMutInterface<SH, SW, SP>,
         SP::ColorType: TryFrom<MP::ColorType, Error = E> + Clone,
     {

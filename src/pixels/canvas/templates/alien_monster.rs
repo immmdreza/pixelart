@@ -53,10 +53,13 @@ impl Template<17, 10> for HalfAlienMonster {
         let color = PixelColor::from_red(106).blue(127);
 
         canvas.fill_inside(color, StrictPositions::LeftCenter);
-        canvas.table_mut()[(1, 5)].update_color(color);
+        canvas.table_mut().get_pixel_mut((1, 5)).update_color(color);
         canvas.fill_inside(color, (3, 5));
         canvas.fill_inside(color, (5, 8));
-        canvas.table_mut()[(15, 5)].update_color(color);
+        canvas
+            .table_mut()
+            .get_pixel_mut((15, 5))
+            .update_color(color);
     }
 }
 

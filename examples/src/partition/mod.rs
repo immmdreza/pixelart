@@ -12,8 +12,8 @@ pub fn moving_plus() {
         |ctx| {
             let canvas = ctx.body_mut();
 
-            for (i, row) in canvas.iter_mut().enumerate() {
-                for pixel in row.iter_mut() {
+            for (i, mut row) in canvas.iter_mut().enumerate() {
+                for mut pixel in row.iter_mut() {
                     pixel.color = PixelColor::from_blue(255 - (i as u8 * 20))
                 }
             }

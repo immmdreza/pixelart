@@ -21,15 +21,19 @@ pub struct CanvasAttachedMarker<
     'c,
     const H: usize,
     const W: usize,
-    P: PixelMutInterface,
+    P: PixelMutInterface + Default,
     C: PixelCanvasMutInterface<H, W, P>,
 > {
     current_pos: PixelStrictPosition<H, W>,
     _phantom: PhantomData<&'c (P, C)>,
 }
 
-impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInterface<H, W, P>>
-    CanvasAttachedMarker<'_, H, W, P, C>
+impl<
+        const H: usize,
+        const W: usize,
+        P: PixelMutInterface + Default,
+        C: PixelCanvasMutInterface<H, W, P>,
+    > CanvasAttachedMarker<'_, H, W, P, C>
 {
     pub fn new(current_pos: impl IntoPixelStrictPosition<H, W>) -> Self {
         Self {
@@ -43,7 +47,7 @@ impl<
         'c,
         const H: usize,
         const W: usize,
-        P: PixelMutInterface,
+        P: PixelMutInterface + Default,
         C: PixelCanvasMutInterface<H, W, P>,
     > CanvasAttachment for CanvasAttachedMarker<'c, H, W, P, C>
 {
@@ -112,7 +116,7 @@ impl<Co> Pen<CanvasUnattachedMarker<Co>> {
     pub fn attach<
         const H: usize,
         const W: usize,
-        P: PixelMutInterface,
+        P: PixelMutInterface + Default,
         C: PixelCanvasMutInterface<H, W, P>,
     >(
         self,
@@ -131,8 +135,12 @@ impl<Co> Pen<CanvasUnattachedMarker<Co>> {
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInterface<H, W, P>>
-    Pen<CanvasAttachedMarker<'_, H, W, P, C>>
+impl<
+        const H: usize,
+        const W: usize,
+        P: PixelMutInterface + Default,
+        C: PixelCanvasMutInterface<H, W, P>,
+    > Pen<CanvasAttachedMarker<'_, H, W, P, C>>
 {
     #[must_use = "This function returns a new unattached pen."]
     pub fn detach(self) -> Pen<CanvasUnattachedMarker<P::ColorType>> {
@@ -146,16 +154,21 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     fn draw(&mut self) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         if self.drawing {
-            self.canvas.table_mut()[self.attachment.current_pos].update_color(self.color.clone());
+            self.canvas
+                .table_mut()
+                .get_pixel_mut(self.attachment.current_pos)
+                .update_color(self.color.clone());
         }
         self
     }
 
     pub fn start(&mut self) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.drawing = true;
@@ -164,6 +177,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     fn go_direction_once(&mut self, dir: Direction) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.attachment.current_pos = self.attachment.current_pos.bounding_direction(dir, 1);
@@ -172,6 +186,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn go_direction(&mut self, dir: Direction, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         for _ in 0..how_many {
@@ -182,6 +197,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn up(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Up, how_many)
@@ -189,6 +205,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn down(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Down, how_many)
@@ -196,6 +213,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn left(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Left, how_many)
@@ -203,6 +221,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn right(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::Right, how_many)
@@ -210,6 +229,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn up_right(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::UpRight, how_many)
@@ -217,6 +237,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn down_right(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::DownRight, how_many)
@@ -224,6 +245,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn down_left(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::DownLeft, how_many)
@@ -231,6 +253,7 @@ impl<const H: usize, const W: usize, P: PixelMutInterface, C: PixelCanvasMutInte
 
     pub fn up_left(&mut self, how_many: usize) -> &mut Self
     where
+        P: PartialEq + Clone + Default,
         <P as PixelInterface>::ColorType: From<PixelColor> + Clone,
     {
         self.go_direction(Direction::UpLeft, how_many)

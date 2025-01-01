@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::{fs::File, path::Path};
 
@@ -73,14 +74,14 @@ impl PixelAnimationBuilder {
     pub(crate) fn get_frame_to_push<
         const H: usize,
         const W: usize,
-        P: PixelInterface,
+        P: PixelInterface + Default,
         I: PixelCanvasInterface<H, W, P>,
     >(
         &self,
         value: &I,
     ) -> DefaultImageBuffer
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
     {
         value
             .default_image_builder()
@@ -91,20 +92,20 @@ impl PixelAnimationBuilder {
     pub fn push_frame_from_canvas<
         const H: usize,
         const W: usize,
-        P: PixelInterface,
+        P: PixelInterface + Default,
         I: PixelCanvasInterface<H, W, P>,
     >(
         &mut self,
         value: &I,
     ) where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
     {
         let frame = self.get_frame_to_push(value);
         self.images.push(frame)
     }
 }
 
-pub trait AnimatedContext<const H: usize, const W: usize, P: PixelInterface> {
+pub trait AnimatedContext<const H: usize, const W: usize, P: PixelInterface + Default> {
     fn frame_count(&self) -> &Repeat;
 
     fn builder(&self) -> &PixelAnimationBuilder;
@@ -114,14 +115,16 @@ pub trait AnimatedContext<const H: usize, const W: usize, P: PixelInterface> {
 
     fn get_frame_to_capture(&self) -> DefaultImageBuffer
     where
-        <P as PixelInterface>::ColorType: RgbaInterface,
+        P: PartialEq + Clone,
+        P::ColorType: Clone + crate::pixels::color::RgbaInterface + Default,
     {
         self.builder().get_frame_to_push(self.canvas())
     }
 
     fn capture(&mut self)
     where
-        <P as PixelInterface>::ColorType: RgbaInterface,
+        P: PartialEq + Clone,
+        P::ColorType: Clone + crate::pixels::color::RgbaInterface + Default,
     {
         let frame = self.get_frame_to_capture();
         self.builder_mut().images.push(frame);
@@ -135,20 +138,26 @@ pub struct WithoutExtra;
 pub struct AnimationContext<
     const H: usize,
     const W: usize = H,
-    P: PixelInterface = Pixel,
+    P: PixelInterface + Default = Pixel,
     Extra = WithoutExtra,
-> {
+> where
+    P::ColorType: Debug,
+{
     frames: Repeat,
     pub builder: PixelAnimationBuilder,
     pub canvas: PixelCanvas<H, W, P>,
     extra: Extra,
 }
 
-impl<Extra, const H: usize, const W: usize, P: PixelInterface> AnimationContext<H, W, P, Extra> {
+impl<Extra, const H: usize, const W: usize, P: PixelInterface + Default>
+    AnimationContext<H, W, P, Extra>
+where
+    P: PartialEq + Clone,
+    <P as PixelInterface>::ColorType: Debug,
+{
     pub fn new(repeat: Repeat) -> AnimationContext<H, W, P, WithoutExtra>
     where
-        <P as PixelInterface>::ColorType: std::default::Default,
-        <P as PixelInterface>::ColorType: Clone,
+        <P as PixelInterface>::ColorType: Clone + std::default::Default,
         P: PixelInitializer,
     {
         AnimationContext::<H, W, P, WithoutExtra> {
@@ -192,7 +201,11 @@ impl<Extra, const H: usize, const W: usize, P: PixelInterface> AnimationContext<
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface, E> AnimationContext<H, W, P, WithExtra<E>> {
+impl<const H: usize, const W: usize, P: PixelInterface + Default, E>
+    AnimationContext<H, W, P, WithExtra<E>>
+where
+    <P as PixelInterface>::ColorType: Debug,
+{
     pub fn extra(&self) -> &E {
         &self.extra.0
     }
@@ -202,8 +215,10 @@ impl<const H: usize, const W: usize, P: PixelInterface, E> AnimationContext<H, W
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface, E> AnimatedContext<H, W, P>
+impl<const H: usize, const W: usize, P: PixelInterface + Default, E> AnimatedContext<H, W, P>
     for AnimationContext<H, W, P, E>
+where
+    <P as PixelInterface>::ColorType: Debug,
 {
     fn frame_count(&self) -> &Repeat {
         &self.frames
@@ -226,9 +241,10 @@ impl<const H: usize, const W: usize, P: PixelInterface, E> AnimatedContext<H, W,
     }
 }
 
-pub trait Animated<const H: usize, const W: usize, P: PixelInterface>
+pub trait Animated<const H: usize, const W: usize, P: PixelInterface + Default>
 where
-    <P as PixelInterface>::ColorType: RgbaInterface,
+    P: PartialEq + Clone,
+    <P as PixelInterface>::ColorType: Clone + RgbaInterface + Default,
 {
     type ContextType: AnimatedContext<H, W, P>;
 
@@ -338,7 +354,7 @@ pub struct Animation<
     C: AnimatedContext<H, W, P>,
     const H: usize,
     const W: usize,
-    P: PixelInterface,
+    P: PixelInterface + Default,
     B: FnOnce() -> C + Copy,
     S: FnOnce(&mut C) + Copy,
     U: FnOnce(&mut C, u16) -> bool + Copy,
@@ -356,7 +372,7 @@ impl<
         C: AnimatedContext<H, W, P>,
         const H: usize,
         const W: usize,
-        P: PixelInterface,
+        P: PixelInterface + Default,
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
@@ -379,7 +395,7 @@ impl<
         C: AnimatedContext<H, W, P>,
         const H: usize,
         const W: usize,
-        P: PixelInterface,
+        P: PixelInterface + Default,
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
@@ -400,14 +416,15 @@ impl<
         C: AnimatedContext<H, W, P>,
         const H: usize,
         const W: usize,
-        P: PixelInterface,
+        P: PixelInterface + Default,
         B: FnOnce() -> C + Copy,
         S: FnOnce(&mut C) + Copy,
         U: FnOnce(&mut C, u16) -> bool + Copy,
         F: AnimationFrameFinisher<C>,
     > Animated<H, W, P> for Animation<C, H, W, P, B, S, U, F>
 where
-    <P as PixelInterface>::ColorType: RgbaInterface,
+    P: PartialEq + Clone,
+    <P as PixelInterface>::ColorType: Clone + RgbaInterface + Default,
 {
     type ContextType = C;
 

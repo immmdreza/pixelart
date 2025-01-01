@@ -5,9 +5,10 @@ pub fn first_stone() {
     let mut canvas = PixelCanvas::<5>::default();
 
     // mutably access the pixel at the center.
-    let center_pixel = &mut canvas[StrictPositions::Center];
+    let mut center_pixel = canvas.get_pixel_mut(StrictPositions::Center);
     // Change its color to blue.
     center_pixel.color = PixelColor::BLUE;
+    drop(center_pixel);
 
     // Create and save image based on the canvas.
     let image_builder = canvas.default_image_builder().with_scale(5);

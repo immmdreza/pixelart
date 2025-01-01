@@ -15,14 +15,17 @@ use crate::{
 fn create_and_save_canvas_of_size<const H: usize, const W: usize>() {
     let mut px = PixelCanvas::<H, W>::default();
 
-    px.draw(CENTER, square::<1>(BLACK));
+    px.draw(CENTER, square::<10>(BLUE));
+
     px.default_image_builder().save("arts/growth.png").unwrap();
 }
 
 fn create_and_save_maybe_canvas_of_size<const H: usize, const W: usize>() {
     let mut px = PixelCanvas::<H, W, MaybePixel>::default();
 
-    px.draw(CENTER, square::<1>(RED));
+    px.draw(CENTER, square::<10>(BLUE));
+    println!("Filled: {}", px.filled_len());
+
     px.default_image_builder()
         .save("arts/maybe_growth.png")
         .unwrap();
@@ -30,20 +33,14 @@ fn create_and_save_maybe_canvas_of_size<const H: usize, const W: usize>() {
 
 #[test]
 fn test_growth() {
-    // That's enough ?!
-    // A single 313x313 normal canvas (not transparent) will cause the stack to overflow!
-    // currently ~97,000 normal [`Pixel`]s can be handled at most.
-    // Pretty enough for something that should look pixely, But many things IDK.
-    create_and_save_canvas_of_size::<312, 312>();
+    // It's now too much! Since we optimize ...
+    create_and_save_canvas_of_size::<1000, 1000>();
 }
 
 #[test]
 fn test_maybe_growth() {
-    // That's enough ?!
-    // A single 271x271 maybe_canvas will cause the stack to overflow!
-    // currently ~73,000 [`MaybePixel`]s can be handled at most.
-    // Pretty enough for something that should look pixely, But many things IDK.
-    create_and_save_maybe_canvas_of_size::<270, 270>();
+    // It's now too much! Since we optimize ...
+    create_and_save_maybe_canvas_of_size::<500, 500>();
 }
 
 #[test]
@@ -90,4 +87,20 @@ fn size() {
     let test: [Box<dyn Any>; 2] = [Box::new("10usize".to_string()), Box::new(10usize)];
 
     println!("{}", size_of_val(&test))
+}
+
+#[test]
+fn _1() {
+    let mut px = MaybePixelCanvas::<5>::default();
+
+    px.draw(TOP_LEFT, square::<4>(RED));
+
+    for (row, pixel_row) in px.iter().enumerate() {
+        for (column, pixel) in pixel_row.iter().enumerate() {
+            println!("({}, {}): {:?}", row, column, pixel);
+        }
+    }
+
+    // let px = square::<4>(RED);
+    px.default_image_builder().save("arts/test/1.png").unwrap();
 }

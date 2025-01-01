@@ -15,13 +15,13 @@ use super::{AnimatedContext, PixelAnimationBuilder};
 #[cfg(feature = "viewer")]
 use crate::viewer::ViewResult;
 
-pub struct LayeredAnimationContext<const H: usize, const W: usize, P: PixelInterface> {
+pub struct LayeredAnimationContext<const H: usize, const W: usize, P: PixelInterface + Default> {
     pub(crate) frame_count: Repeat,
     pub(crate) layered_canvas: LayeredCanvas<H, W, P>,
     pub(crate) builder: PixelAnimationBuilder,
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> LayeredAnimationContext<H, W, P> {
+impl<const H: usize, const W: usize, P: PixelInterface + Default> LayeredAnimationContext<H, W, P> {
     pub fn new(
         layered_canvas: LayeredCanvas<H, W, P>,
         builder: PixelAnimationBuilder,
@@ -52,7 +52,7 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredAnimationContext<
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> AnimatedContext<H, W, P>
+impl<const H: usize, const W: usize, P: PixelInterface + Default> AnimatedContext<H, W, P>
     for LayeredAnimationContext<H, W, P>
 where
     P: Clone + PixelMutInterface,
@@ -80,7 +80,8 @@ where
 
     fn get_frame_to_capture(&self) -> crate::image::DefaultImageBuffer
     where
-        <P as PixelInterface>::ColorType: crate::pixels::color::RgbaInterface,
+        P: PartialEq + Clone,
+        P::ColorType: Clone + crate::pixels::color::RgbaInterface + Default,
     {
         self.layered_canvas()
             .get_resulting_canvas()

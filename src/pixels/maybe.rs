@@ -5,11 +5,11 @@ use super::{
     },
     color::PixelColor,
     position::PixelStrictPositionInterface,
-    PixelData, PixelInitializer, PixelInterface, PixelMutInterface,
+    PixelInitializer, PixelInterface, PixelMutInterface,
 };
 
 /// A pixel that may not have any effect on the color at this position.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct MaybePixel {
     pub color: Option<PixelColor>,
 }
@@ -46,6 +46,8 @@ impl PixelInterface for MaybePixel {
     fn color(&self) -> &Self::ColorType {
         &self.color
     }
+
+    const TRANSPARENT: bool = true;
 }
 
 impl PixelInterface for &MaybePixel {
@@ -87,9 +89,9 @@ impl PixelInterface for &mut MaybePixel {
 pub trait MaybePixelCanvasExt<const H: usize, const W: usize>:
     SharedPixelCanvasExt<H, W, MaybePixel>
 {
-    fn iter_existing_pixels(&self) -> impl Iterator<Item = PixelData<&MaybePixel>> {
-        self.table().iter_pixels().filter(|p| p.has_color())
-    }
+    // fn iter_existing_pixels(&self) -> impl Iterator<Item = PixelData<&MaybePixel>> {
+    //     self.table().iter_pixels().filter(|p| p.has_color())
+    // }
 }
 
 impl<const H: usize, const W: usize, T> MaybePixelCanvasExt<H, W> for T where

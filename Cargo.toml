@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "examples"]
+members = [".", "examples", "pixelart_table_abs"]
 
 [package]
 name = "pixelart"
@@ -19,7 +19,6 @@ exclude = ["arts/", ".vscode/", "/target", "/examples"]
 rand = "0.8.5"
 anyhow = "1.0.95"
 thiserror = "2.0.9"
-arrayvec = "0.7.6"
 
 # Deps related to generate and modify pictures.
 image = "0.25.5"
@@ -30,6 +29,7 @@ eframe = { version = "0.30.0", optional = true }
 uuid = { version = "1.11.0", features = ["v4"], optional = true }
 atomic-time = { version = "0.1", optional = true }
 rfd = { version = "0.15.1", optional = true }
+pixelart_table_abs = { version = "*", path = "pixelart_table_abs" }
 
 [features]
 viewer = ["dep:eframe", "dep:uuid", "dep:atomic-time", "dep:rfd"]

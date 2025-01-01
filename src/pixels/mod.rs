@@ -3,7 +3,7 @@
 
 use std::fmt::Display;
 
-use position::PixelPosition;
+use pixelart_table_abs::table::{IllusionArray2DHandle, IllusionArray2DHandleMut};
 
 use self::color::PixelColor;
 
@@ -17,6 +17,7 @@ pub trait PixelInitializer: PixelInterface {
 }
 
 pub trait PixelInterface {
+    const TRANSPARENT: bool = false;
     type ColorType;
 
     /// Indicates if this pixel has a color.
@@ -33,7 +34,7 @@ pub trait PixelMutInterface: PixelInterface {
     fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub struct Pixel {
     pub color: PixelColor,
 }
@@ -114,12 +115,14 @@ where
 }
 
 /// A set of extension methods for a shared (owned, ref, mut) iterator over [`Pixel`]s.
-pub trait PixelIterExt<P: PixelInterface>: Iterator<Item = PixelData<P>> {
+pub trait PixelIterExt<'a, const H: usize, const W: usize, P: PixelInterface + Default + 'a>:
+    Iterator<Item = IllusionArray2DHandle<'a, H, W, P>>
+{
     /// Filter pixels using their [`PixelColor`].
     fn filter_color(
         self,
         color: impl Into<<P as PixelInterface>::ColorType>,
-    ) -> impl Iterator<Item = PixelData<P>>
+    ) -> impl Iterator<Item = IllusionArray2DHandle<'a, H, W, P>>
     where
         Self: Sized,
         <P as PixelInterface>::ColorType: PartialEq,
@@ -129,12 +132,15 @@ pub trait PixelIterExt<P: PixelInterface>: Iterator<Item = PixelData<P>> {
     }
 
     /// Filter pixels based on their [`PixelPosition`].
-    fn filter_position<F>(self, mut predicate: F) -> impl Iterator<Item = PixelData<P>>
+    fn filter_position<F>(
+        self,
+        mut predicate: F,
+    ) -> impl Iterator<Item = IllusionArray2DHandle<'a, H, W, P>>
     where
         Self: Sized,
-        F: FnMut(&PixelPosition) -> bool,
+        F: FnMut((usize, usize)) -> bool,
     {
-        self.filter(move |pixel| predicate(pixel.position()))
+        self.filter(move |pixel| predicate(pixel.index()))
     }
 }
 
@@ -142,51 +148,61 @@ pub trait PixelIterExt<P: PixelInterface>: Iterator<Item = PixelData<P>> {
 // impl<'p, T> PixelIterExt<&'p Pixel> for T where T: Iterator<Item = &'p Pixel> {}
 // impl<'p, T> PixelIterExt<&'p mut Pixel> for T where T: Iterator<Item = &'p mut Pixel> {}
 
-impl<T, P: PixelInterface> PixelIterExt<P> for T where T: Iterator<Item = PixelData<P>> {}
+impl<'a, const H: usize, const W: usize, T, P: PixelInterface + Default + 'a>
+    PixelIterExt<'a, H, W, P> for T
+where
+    T: Iterator<Item = IllusionArray2DHandle<'a, H, W, P>>,
+{
+}
 
 /// A set of extension methods for a mutable only iterator over [`Pixel`]s.
-pub trait PixelIterMutExt<'p, Item: PixelMutInterface>: Iterator<Item = Item> {
-    /// Updates the [`PixelColor`] for all of this iterator members.
-    fn update_colors(self, color: impl Into<<Self::Item as PixelInterface>::ColorType>)
+pub trait PixelIterMutExt<'p, const H: usize, const W: usize, P: PixelMutInterface + Default + 'p>:
+    Iterator<Item = IllusionArray2DHandleMut<'p, H, W, P>>
+where
+    P: PartialEq + Clone,
+{
+    /// Filter pixels using their [`PixelColor`].
+    fn filter_color(
+        self,
+        color: impl Into<<P as PixelInterface>::ColorType>,
+    ) -> impl Iterator<Item = IllusionArray2DHandleMut<'p, H, W, P>>
     where
         Self: Sized,
-        <Self::Item as PixelInterface>::ColorType: Clone,
+        <P as PixelInterface>::ColorType: PartialEq,
+    {
+        let color: <P as PixelInterface>::ColorType = color.into();
+        self.filter(move |pixel| pixel.color() == &color)
+    }
+
+    /// Filter pixels based on their [`PixelPosition`].
+    fn filter_position<F>(
+        self,
+        mut predicate: F,
+    ) -> impl Iterator<Item = IllusionArray2DHandleMut<'p, H, W, P>>
+    where
+        Self: Sized,
+        F: FnMut((usize, usize)) -> bool,
+    {
+        self.filter(move |pixel| predicate(pixel.index()))
+    }
+
+    /// Updates the [`PixelColor`] for all of this iterator members.
+    fn update_colors(self, color: impl Into<P::ColorType>)
+    where
+        Self: Sized,
+        P::ColorType: Clone,
     {
         let color = color.into();
         self.for_each(move |mut pixel| {
             pixel.update_color(color.clone());
-        })
+        });
     }
 }
 
-impl<T, P: PixelMutInterface> PixelIterMutExt<'_, P> for T where T: Iterator<Item = P> {}
-
-#[derive(Debug)]
-pub struct PixelData<P: PixelInterface> {
-    pub pixel: P,
-    position: PixelPosition,
-}
-
-impl<P: PixelMutInterface> PixelMutInterface for PixelData<P> {
-    fn update_color(&mut self, color: impl Into<Self::ColorType>) -> Self::ColorType {
-        self.pixel.update_color(color)
-    }
-}
-
-impl<P: PixelInterface> PixelInterface for PixelData<P> {
-    type ColorType = P::ColorType;
-
-    fn has_color(&self) -> bool {
-        self.pixel.has_color()
-    }
-
-    fn color(&self) -> &Self::ColorType {
-        self.pixel.color()
-    }
-}
-
-impl<P: PixelInterface> PixelData<P> {
-    pub fn position(&self) -> &PixelPosition {
-        &self.position
-    }
+impl<'p, const H: usize, const W: usize, T, P: PixelMutInterface + Default + 'p>
+    PixelIterMutExt<'p, H, W, P> for T
+where
+    T: Iterator<Item = IllusionArray2DHandleMut<'p, H, W, P>>,
+    P: PartialEq + Clone,
+{
 }

@@ -1,10 +1,10 @@
 use crate::{
     pixels::{
         maybe::MaybePixel,
-        position::{PixelStrictPositionInterface, StrictPositions},
+        position::{IntoPixelStrictPosition, PixelStrictPositionInterface, StrictPositions},
         PixelInterface,
     },
-    prelude::PixelColor,
+    prelude::{PixelColor, TOP_RIGHT},
 };
 
 use super::{drawable::Drawable, PixelCanvas, PixelCanvasMutInterface, SharedMutPixelCanvasExt};
@@ -32,7 +32,7 @@ impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W, MaybePixe
         start_pos: impl crate::pixels::position::IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
-        P: crate::pixels::PixelMutInterface,
+        P: crate::pixels::PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<HC, WC, P>,
         P::ColorType: TryFrom<<MaybePixel as PixelInterface>::ColorType, Error = E>,
     {
@@ -45,14 +45,14 @@ impl<const H: usize, const W: usize, T: Template<H, W>> Drawable<H, W, MaybePixe
 pub fn vertical_line<const H: usize>(
     color: impl Into<PixelColor>,
 ) -> PixelCanvas<H, 1, MaybePixel> {
-    PixelCanvas::<H, 1, MaybePixel>::new(Some(color.into()))
+    PixelCanvas::<H, 1, MaybePixel>::from_fill_color(Some(color.into()))
 }
 
 /// A template horizontal line with const `W` width.
 pub fn horizontal_line<const W: usize>(
     color: impl Into<PixelColor>,
 ) -> PixelCanvas<1, W, MaybePixel> {
-    PixelCanvas::<1, W, MaybePixel>::new(Some(color.into()))
+    PixelCanvas::<1, W, MaybePixel>::from_fill_color(Some(color.into()))
 }
 
 /// Bordered `H`  * `W` square.
@@ -62,7 +62,11 @@ pub fn rectangle<const H: usize, const W: usize>(
     let mut table = PixelCanvas::<H, W, MaybePixel>::default();
 
     table.draw(StrictPositions::TopLeft, vertical_line::<H>(color.clone()));
-    table.draw(StrictPositions::TopRight, vertical_line::<H>(color.clone()));
+
+    let strict_pos: crate::pixels::position::PixelStrictPosition<H, W> =
+        TOP_RIGHT.into_pixel_strict_position();
+    println!("{:?}", strict_pos);
+    table.draw(strict_pos, vertical_line::<H>(color.clone()));
 
     table.draw(
         StrictPositions::TopLeft.bounding_right(1),
@@ -93,7 +97,7 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
+        let mut canvas = PixelCanvas::<5>::default();
         canvas.draw_exact_abs(rectangle(PixelColor::BLACK));
 
         canvas.fill_inside(PixelColor::GREEN, StrictPositions::Center);

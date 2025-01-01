@@ -115,13 +115,12 @@ impl From<&'static str> for TopLayerId {
     }
 }
 
-#[derive(Debug)]
-pub struct LayeredCanvas<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
+pub struct LayeredCanvas<const H: usize, const W: usize = H, P: PixelInterface + Default = Pixel> {
     pub(crate) base_layer: PixelCanvas<H, W, P>,
     pub(crate) top_layers: Vec<LayerData<H, W>>, // Top layers are all using maybe (transparent) pixel
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
+impl<const H: usize, const W: usize, P: PixelInterface + Default> LayeredCanvas<H, W, P> {
     pub fn new_layer(&mut self, layer_data: LayerData<H, W>) -> Result<usize, AddLayerError> {
         if let Some(tag) = &layer_data.layer_tag {
             if self
@@ -140,8 +139,8 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
 
     pub fn get_resulting_canvas<E>(&self) -> PixelCanvas<H, W, P>
     where
-        P: Clone + PixelMutInterface,
-        P::ColorType: TryFrom<Option<PixelColor>, Error = E>,
+        P: PartialEq + Clone + PixelMutInterface,
+        P::ColorType: Clone + TryFrom<Option<PixelColor>, Error = E>,
     {
         let mut base = self.base_layer.clone();
         for top in self.top_layers.iter() {
@@ -184,23 +183,15 @@ impl<const H: usize, const W: usize, P: PixelInterface> LayeredCanvas<H, W, P> {
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> Default
+impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer + Default> Default
     for LayeredCanvas<H, W, P>
 where
+    P: PartialEq + Clone,
     <P as PixelInterface>::ColorType: std::default::Default + Clone,
 {
     fn default() -> Self {
         Self {
             base_layer: PixelCanvas::default(),
-            top_layers: Vec::new(),
-        }
-    }
-}
-
-impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> LayeredCanvas<H, W, P> {
-    pub fn new(color: impl Into<P::ColorType> + Clone) -> Self {
-        Self {
-            base_layer: PixelCanvas::new(color),
             top_layers: Vec::new(),
         }
     }
@@ -223,7 +214,8 @@ mod tests {
 
     #[test]
     fn test_name() {
-        let mut layered = LayeredCanvas::<50>::new(MAGENTA);
+        let mut layered = LayeredCanvas::<50>::default();
+        layered.base_layer_mut().fill(MAGENTA);
 
         layered
             .new_layer(

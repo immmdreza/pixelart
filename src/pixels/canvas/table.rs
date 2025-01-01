@@ -2,75 +2,67 @@
 //! [PixelCanvas](`super::PixelCanvas`)
 //!
 
-use std::{array, fmt::Display};
+use pixelart_table_abs::table::{IllusionArray2DHandle, IllusionArray2DHandleMut, IllusionTable};
 
 use crate::pixels::{
-    position::{
-        IntoPixelStrictPosition, PixelPosition, PixelPositionInterface,
-        PixelStrictPositionInterface,
-    },
-    Pixel, PixelData, PixelInitializer, PixelInterface,
+    position::{IntoPixelStrictPosition, PixelStrictPositionInterface},
+    Pixel, PixelInitializer, PixelInterface, PixelMutInterface,
 };
-
-use super::row::PixelRow;
-
 /// Represents a table of [`Pixel`]s. (A collection of [`PixelRow`]s).
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PixelTable<const H: usize, const W: usize = H, P: PixelInterface = Pixel> {
-    pub(crate) rows: [PixelRow<W, P>; H],
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PixelTable<const H: usize, const W: usize = H, P: PixelInterface + Default = Pixel> {
+    pub(crate) inner: IllusionTable<H, W, P>,
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface + Display> Display for PixelTable<H, W, P> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for pix in self.iter() {
-            writeln!(f, "{}", pix)?;
-        }
-        Ok(())
+impl<const H: usize, const W: usize, P: PixelInterface + Default> PixelTable<H, W, P> {
+    /// Returns actual existing elements, any other element will be the default value.
+    pub fn real_items(&self) -> impl Iterator<Item = ((&usize, &usize), &P)> {
+        self.inner.real_items()
+    }
+
+    /// Returns actual existing elements, any other element will be the default value.
+    pub fn real_items_mut(&mut self) -> impl Iterator<Item = ((&usize, &usize), &mut P)> {
+        self.inner.real_items_mut()
+    }
+
+    pub fn swap(
+        &mut self,
+        a: impl IntoPixelStrictPosition<H, W>,
+        b: impl IntoPixelStrictPosition<H, W>,
+    ) {
+        self.inner.swap(
+            a.into_pixel_strict_position().expand(),
+            b.into_pixel_strict_position().expand(),
+        )
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer> PixelTable<H, W, P> {
-    pub fn new(fill_color: impl Into<P::ColorType> + Clone) -> Self {
-        Self {
-            rows: array::from_fn(|_| PixelRow::new(fill_color.clone())),
-        }
+impl<const H: usize, const W: usize, P: PixelInterface + PixelInitializer + Clone + Default>
+    PixelTable<H, W, P>
+{
+    pub fn filled_len(&self) -> usize {
+        self.inner.filled_len()
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
-    /// Get a pixel ref at a [`PixelPosition`] which can be out ob bound! In that case [`None`] is returned.
-    ///
-    /// Use indexing syntax and a [PixelStrictPosition](`crate::pixels::position::PixelStrictPosition`)
-    /// to ensure the position is inbound.
-    ///
-    /// ## Example of indexing
-    /// ```rust
-    /// # use pixelart::pixels::canvas::table::PixelTable;
-    /// # let table = PixelTable::<5>::default();
-    /// let pos = (0, 0);
-    /// // The pos will be ensured to be in range even if it's not.
-    /// let pixel = &table[pos];
-    /// ```
-    pub fn get_pixel(&self, pos: PixelPosition) -> Option<&P> {
-        let (row, column) = pos.expand();
-        self.get(row)?.get(column)
+impl<const H: usize, const W: usize, P: PixelInterface + Default> PixelTable<H, W, P> {
+    pub fn get_pixel(
+        &self,
+        pos: impl IntoPixelStrictPosition<H, W>,
+    ) -> IllusionArray2DHandle<'_, H, W, P> {
+        let (row, column) = pos.into_pixel_strict_position().expand();
+        self.inner.get((row, column)).unwrap()
     }
 
-    /// Get a pixel mutable ref at a [`PixelPosition`] which can be out ob bound! In that case [`None`] is returned.
-    ///
-    /// Use indexing syntax and a [PixelStrictPosition](`crate::pixels::position::PixelStrictPosition`)
-    /// to ensure the position is inbound.
-    ///
-    /// ## Example of indexing
-    /// ```rust
-    /// # use pixelart::pixels::canvas::table::PixelTable;
-    /// # let mut table = PixelTable::<5>::default();
-    /// let pos = (0, 0);
-    /// let pixel = &mut table[pos];
-    /// ```
-    pub fn get_pixel_mut(&mut self, pos: PixelPosition) -> Option<&mut P> {
-        let (row, column) = pos.expand();
-        self.get_mut(row)?.get_mut(column)
+    pub fn get_pixel_mut(
+        &mut self,
+        pos: impl IntoPixelStrictPosition<H, W>,
+    ) -> pixelart_table_abs::table::IllusionArray2DHandleMut<H, W, P>
+    where
+        P: PartialEq + Clone,
+    {
+        let (row, column) = pos.into_pixel_strict_position().expand();
+        self.inner.get_mut((row, column)).unwrap()
     }
 
     /// Returns an iterator over all [`Pixel`]s in this table row by row.
@@ -81,19 +73,11 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     /// # use crate::pixelart::pixels::PixelInterface;
     /// # let mut table = PixelTable::<2>::default();
     /// for pix in table.iter_pixels() {
-    ///     println!("{:?}", pix.position())
+    ///     println!("{:?}", pix)
     /// }
     /// ```
-    pub fn iter_pixels<'p>(&'p self) -> impl Iterator<Item = PixelData<&'p P>>
-    where
-        &'p P: PixelInterface,
-    {
-        self.iter().enumerate().flat_map(|(row, f)| {
-            f.iter().enumerate().map(move |(col, f)| PixelData {
-                pixel: f,
-                position: PixelPosition::new(row, col),
-            })
-        })
+    pub fn iter_pixels(&self) -> impl Iterator<Item = IllusionArray2DHandle<H, W, P>> {
+        self.inner.iter()
     }
 
     /// Use this type to iterate over mutable ref of the pixels.
@@ -105,106 +89,79 @@ impl<const H: usize, const W: usize, P: PixelInterface> PixelTable<H, W, P> {
     /// # let mut table = PixelTable::<2>::default();
     /// for pix in table.iter_pixels_mut() {
     ///     // You can edit pixel here.
-    ///     println!("{:?}", pix.position())
+    ///     println!("{:?}", pix)
     /// }
     /// ```
-    pub fn iter_pixels_mut<'p>(&'p mut self) -> impl Iterator<Item = PixelData<&'p mut P>>
+    pub fn iter_pixels_mut(&mut self) -> impl Iterator<Item = IllusionArray2DHandleMut<H, W, P>>
     where
-        &'p mut P: PixelInterface,
+        P: PartialEq + Clone,
     {
-        self.iter_mut().enumerate().flat_map(|(row, f)| {
-            f.iter_mut().enumerate().map(move |(col, f)| PixelData {
-                pixel: f,
-                position: PixelPosition::new(row, col),
-            })
-        })
+        self.inner.iter_mut()
     }
 
     /// Calls a closure on each read-only ref pixel of this table.
     pub fn for_each_pixel<F>(&self, f: F)
     where
-        F: Fn(&P) + Copy,
+        F: Fn(IllusionArray2DHandle<H, W, P>) + Copy,
     {
-        self.iter().for_each(|row| row.iter().for_each(f))
+        self.iter_pixels().for_each(f);
     }
 
     /// Calls a closure on each mutable ref pixel of this table.
     pub fn for_each_pixel_mut<F>(&mut self, f: F)
     where
-        F: FnMut(&mut P) + Copy,
+        P: PixelMutInterface + Clone + PartialEq,
+        F: FnMut(IllusionArray2DHandleMut<H, W, P>) + Copy,
     {
-        self.iter_mut().for_each(|row| row.iter_mut().for_each(f))
+        self.iter_pixels_mut().for_each(f);
+    }
+
+    pub fn iter(
+        &self,
+    ) -> pixelart_table_abs::IllusionArrayIter<'_, H, pixelart_table_abs::IllusionArray<W, P>> {
+        self.inner.inner().iter()
+    }
+
+    pub fn iter_mut(
+        &mut self,
+    ) -> pixelart_table_abs::IllusionArrayIterMut<'_, H, pixelart_table_abs::IllusionArray<W, P>>
+    where
+        P: PixelMutInterface + Clone + PartialEq,
+    {
+        self.inner.inner_mut().iter_mut()
+    }
+
+    pub fn get_row(
+        &self,
+        row: usize,
+    ) -> Option<
+        pixelart_table_abs::IllusionArrayHandle<'_, H, pixelart_table_abs::IllusionArray<W, P>>,
+    > {
+        self.inner.get_row(row)
+    }
+
+    pub fn get_row_mut(
+        &mut self,
+        row: usize,
+    ) -> Option<
+        pixelart_table_abs::IllusionArrayHandleMut<'_, H, pixelart_table_abs::IllusionArray<W, P>>,
+    >
+    where
+        P: PixelMutInterface + Clone + PartialEq,
+    {
+        self.inner.get_row_mut(row)
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface> IntoIterator for PixelTable<H, W, P> {
-    type Item = PixelRow<W, P>;
-    type IntoIter = std::array::IntoIter<Self::Item, H>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.rows.into_iter()
-    }
-}
-
-impl<const H: usize, const W: usize, P: PixelInterface> std::ops::DerefMut for PixelTable<H, W, P> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.rows
-    }
-}
-
-impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Deref for PixelTable<H, W, P> {
-    type Target = [PixelRow<W, P>; H];
-
-    fn deref(&self) -> &Self::Target {
-        &self.rows
-    }
-}
-
-impl<const H: usize, const W: usize, P> Default for PixelTable<H, W, P>
+impl<const H: usize, const W: usize, P: Default> Default for PixelTable<H, W, P>
 where
-    P: PixelInterface + PixelInitializer,
+    P: PixelInterface + PixelInitializer + Clone + PartialEq,
     P::ColorType: Default + Clone,
 {
     fn default() -> Self {
-        Self::new(P::ColorType::default())
-    }
-}
-
-impl<const H: usize, const W: usize, P: PixelInterface> std::ops::IndexMut<usize>
-    for PixelTable<H, W, P>
-{
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.rows[index]
-    }
-}
-
-impl<const H: usize, const W: usize, P: PixelInterface> std::ops::Index<usize>
-    for PixelTable<H, W, P>
-{
-    type Output = PixelRow<W, P>;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.rows[index]
-    }
-}
-
-impl<const H: usize, const W: usize, T: IntoPixelStrictPosition<H, W>, P: PixelInterface>
-    std::ops::Index<T> for PixelTable<H, W, P>
-{
-    type Output = P;
-
-    fn index(&self, index: T) -> &Self::Output {
-        let (row, column) = index.into_pixel_strict_position().expand();
-        &self[row][column]
-    }
-}
-
-impl<const H: usize, const W: usize, T: IntoPixelStrictPosition<H, W>, P: PixelInterface>
-    std::ops::IndexMut<T> for PixelTable<H, W, P>
-{
-    fn index_mut(&mut self, index: T) -> &mut Self::Output {
-        let (row, column) = index.into_pixel_strict_position().expand();
-        &mut self[row][column]
+        Self {
+            inner: IllusionTable::default(),
+        }
     }
 }
 
@@ -214,30 +171,16 @@ mod pixel_table_tests {
         pixels::{
             canvas::SharedPixelCanvasExt,
             color::{PixelColor, PixelColorExt},
-            position::{PixelStrictPosition, PixelStrictPositionInterface},
-            PixelMutInterface,
+            position::PixelStrictPosition,
         },
         prelude::PixelCanvas,
     };
 
     use super::*;
 
-    fn _assert_iterator_type<
-        'a,
-        const W: usize,
-        I: Iterator<Item = &'a PixelRow<W, P>>,
-        P: PixelInterface + 'static,
-    >(
-        _row_iter: I,
-    ) {
-    }
-
     #[test]
     fn test_name() {
         let mut table = PixelTable::<5>::default();
-
-        let iter = table.iter();
-        _assert_iterator_type(iter);
 
         for row in table.iter() {
             for pixel in row.iter() {
@@ -247,9 +190,8 @@ mod pixel_table_tests {
 
         let pos = PixelStrictPosition::new(0, 0).unwrap();
 
-        let _pixel00 = &mut table[&pos];
+        let mut _pixel00 = table.get_pixel_mut(pos);
         _pixel00.update_color(PixelColor::BLUE);
-        let _pixel00_maybe_invalid = table.get_pixel(pos.unbound());
     }
 
     #[test]
@@ -268,12 +210,19 @@ mod pixel_table_tests {
     fn test_flip() {
         let mut canvas = PixelCanvas::<5>::default();
 
-        canvas[0].iter_mut().for_each(|pix| {
-            pix.update_color(PixelColor::BLACK);
-        });
+        canvas
+            .get_row_mut(0)
+            .unwrap()
+            .iter_mut()
+            .for_each(|mut pix| {
+                pix.update_color(PixelColor::BLACK);
+            });
 
-        canvas.iter_mut().for_each(|row| {
-            row.last_mut().unwrap().update_color(PixelColor::CYAN);
+        canvas.iter_mut().for_each(|mut row| {
+            row.iter_mut()
+                .last()
+                .unwrap()
+                .update_color(PixelColor::BLACK);
         });
 
         canvas

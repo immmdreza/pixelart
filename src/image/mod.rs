@@ -63,16 +63,17 @@ impl PixelImageStyle {
 pub struct PixelImageBuilder<'c, const H: usize, const W: usize, P, I>
 where
     I: PixelCanvasInterface<H, W, P>,
-    P: PixelInterface,
+    P: PixelInterface + Default,
 {
     canvas_ref: &'c I,
     style: PixelImageStyle,
     _phantom: PhantomData<P>,
 }
 
-impl<'c, const H: usize, const W: usize, P: PixelInterface, I> PixelImageBuilder<'c, H, W, P, I>
+impl<'c, const H: usize, const W: usize, P, I> PixelImageBuilder<'c, H, W, P, I>
 where
     I: PixelCanvasInterface<H, W, P>,
+    P: PixelInterface + Default,
 {
     pub fn new(canvas_ref: &'c I, style: PixelImageStyle) -> Self {
         Self {
@@ -98,7 +99,10 @@ where
         }
     }
 
-    fn get_pixel_paper_image(&self) -> DefaultImageBuffer {
+    fn get_pixel_paper_image(&self) -> DefaultImageBuffer
+    where
+        P::ColorType: RgbaInterface + Default,
+    {
         let separator_pixel_length = self.style.border_width;
 
         // How many pixels in height for blocks
@@ -113,7 +117,13 @@ where
         let separators_pixel_in_width = separators_count_in_width * separator_pixel_length;
         let width = blocks_pixel_in_width + separators_pixel_in_width;
 
-        let image: DefaultImageBuffer = ImageBuffer::new(width as u32, height as u32);
+        let image = if P::TRANSPARENT {
+            // Transparent image, no need to fill with any color (just empty).
+            ImageBuffer::new(width as u32, height as u32)
+        } else {
+            // Filled with default color.
+            ImageBuffer::from_pixel(width as u32, height as u32, P::ColorType::default().rgba())
+        };
 
         image
     }
@@ -182,9 +192,11 @@ where
     {
         let table = self.canvas_ref.table();
 
-        for (row, pixel_row) in table.iter().enumerate() {
-            for (column, pixel) in pixel_row.iter().filter(|p| p.has_color()).enumerate() {
-                self.draw_pixel_on_image(PixelPosition::new(row, column), pixel, image)
+        // The image is already filled with the default color.
+        // So, we only need to draw the pixels that are real, because everything else is default.
+        for ((row, column), pixel) in table.real_items() {
+            if pixel.has_color() {
+                self.draw_pixel_on_image(PixelPosition::new(*row, *column), pixel, image)
             }
         }
     }
@@ -192,7 +204,7 @@ where
     /// Returns an [`ImageBuffer`] based on the current canvas attached.
     pub fn get_image(&self) -> DefaultImageBuffer
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
     {
         let mut image = self.get_pixel_paper_image();
         self.draw_on_image(&mut image);
@@ -203,7 +215,7 @@ where
     /// Saves the [`ImageBuffer`] to a file at specified path.
     pub fn save<Q>(&self, path: Q) -> Result<(), image::ImageError>
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
         Q: AsRef<Path>,
     {
         let image = self.get_image();
@@ -214,7 +226,7 @@ where
     /// View the image inside a window.
     pub fn view(&self) -> ViewResult
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
     {
         let image = self.get_image();
         crate::viewer::view([[image]])
@@ -224,7 +236,7 @@ where
     /// View the image inside a window.
     pub fn view_with_others<T>(&self, others: T) -> ViewResult
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
         T: IntoIterator<Item = DefaultImageBuffer>,
     {
         let first_image = vec![self.get_image()];
@@ -236,7 +248,7 @@ where
     /// View the image inside a window.
     pub fn view_as_series<T>(&self, others: T) -> ViewResult
     where
-        P::ColorType: RgbaInterface,
+        P::ColorType: RgbaInterface + Default,
         T: IntoIterator<Item = DefaultImageBuffer>,
     {
         let image = self.get_image();
@@ -251,15 +263,14 @@ mod tests {
         pixels::{
             canvas::{MaybePixelCanvas, SharedPixelCanvasExt as _},
             color::PixelColorExt as _,
-            position::PixelPositionInterface as _,
-            PixelIterExt, PixelIterMutExt as _,
+            PixelIterMutExt as _,
         },
         prelude::{PixelCanvas, PixelColor},
     };
 
     #[test]
     fn full_pixel_test() {
-        let canvas = PixelCanvas::<3>::new(PixelColor::YELLOW);
+        let canvas = PixelCanvas::<3>::from_fill_color(PixelColor::YELLOW);
 
         canvas
             .default_image_builder()
@@ -274,7 +285,7 @@ mod tests {
 
         canvas
             .iter_pixels_mut()
-            .filter_position(|p| p.column() == p.row())
+            .filter_position(|(row, column)| column == row)
             .update_colors(PixelColor::MAGENTA);
 
         canvas

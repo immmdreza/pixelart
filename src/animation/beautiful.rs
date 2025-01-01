@@ -9,7 +9,13 @@ use super::{
     AnimationFrameFinisherHolder,
 };
 
-pub struct BeautifulAnimation<Extras, const H: usize, const W: usize = H, P: PixelInterface = Pixel>
+pub struct BeautifulAnimation<
+    Extras,
+    const H: usize,
+    const W: usize = H,
+    P: PixelInterface + Default = Pixel,
+> where
+    <P as PixelInterface>::ColorType: std::fmt::Debug,
 {
     updater: Box<dyn Fn(&mut AnimationContext<H, W, P>, u16, &mut Extras) -> bool>,
     setup: Box<dyn Fn(&mut AnimationContext<H, W, P>, &mut Extras)>,
@@ -19,8 +25,10 @@ pub struct BeautifulAnimation<Extras, const H: usize, const W: usize = H, P: Pix
     _phantom: PhantomData<(P, Extras)>,
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface + 'static, Extras>
+impl<const H: usize, const W: usize, P: PixelInterface + Default + 'static, Extras>
     BeautifulAnimation<Extras, H, W, P>
+where
+    <P as PixelInterface>::ColorType: std::fmt::Debug,
 {
     pub fn new_with_finisher(
         frame_count: Repeat,
@@ -40,8 +48,10 @@ impl<const H: usize, const W: usize, P: PixelInterface + 'static, Extras>
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface + 'static, Extras>
+impl<const H: usize, const W: usize, P: PixelInterface + Default + 'static, Extras>
     BeautifulAnimation<Extras, H, W, P>
+where
+    <P as PixelInterface>::ColorType: std::fmt::Debug,
 {
     pub fn new(
         frame_count: Repeat,
@@ -60,11 +70,12 @@ impl<const H: usize, const W: usize, P: PixelInterface + 'static, Extras>
     }
 }
 
-impl<const H: usize, const W: usize, P: PixelInterface, Extras> Animated<H, W, P>
+impl<const H: usize, const W: usize, P: PixelInterface + Default, Extras> Animated<H, W, P>
     for BeautifulAnimation<Extras, H, W, P>
 where
-    P: PixelInitializer,
+    P: PixelInitializer + PartialEq + Clone,
     <P as PixelInterface>::ColorType: RgbaInterface + Default + Clone,
+    <P as PixelInterface>::ColorType: std::fmt::Debug,
 {
     type ContextType = AnimationContext<H, W, P>;
 

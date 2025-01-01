@@ -2605,11 +2605,11 @@ name = "pixelart"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "arrayvec",
  "atomic-time",
  "eframe",
  "image",
  "imageproc",
+ "pixelart_table_abs",
  "rand",
  "rfd",
  "thiserror 2.0.9",
@@ -2622,6 +2622,10 @@ version = "0.1.0"
 dependencies = [
  "pixelart",
 ]
+
+[[package]]
+name = "pixelart_table_abs"
+version = "0.1.0"
 
 [[package]]
 name = "pkg-config"

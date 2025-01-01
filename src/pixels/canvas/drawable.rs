@@ -19,14 +19,14 @@ where
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<HC, WC, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>;
 
     /// As same as [`Drawable::draw_on`] but the `H` and `W` on canvas and drawable are same
     fn draw_on_exact<P, C, E>(&self, start_pos: impl IntoPixelStrictPosition<H, W>, canvas: &mut C)
     where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<H, W, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
@@ -36,7 +36,7 @@ where
     /// As same as [`Drawable::draw_on_exact`] but the start point is TopLeft (0, 0).
     fn draw_on_exact_abs<P, C, E>(&self, canvas: &mut C)
     where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<H, W, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
@@ -58,28 +58,49 @@ pub fn draw_canvas_on<
     start_pos: impl IntoPixelStrictPosition<HC, WC>,
     canvas: &mut C,
 ) where
-    MP: PixelInterface,
-    P: PixelMutInterface,
+    MP: PixelInterface + Default,
+    P: PixelMutInterface + PartialEq + Clone + Default,
     C: PixelCanvasMutInterface<HC, WC, P>,
     MP::ColorType: Clone,
     P::ColorType: TryFrom<MP::ColorType, Error = E>,
 {
     let start_pos = start_pos.into_pixel_strict_position();
-    for (row, pixel_row) in me.iter().enumerate() {
-        for (column, pixel) in pixel_row.iter().filter(|f| f.has_color()).enumerate() {
+    if MP::TRANSPARENT {
+        // If the pixel is transparent, we can skip the empty pixels (which is None).
+        for ((row, column), pixel) in me.real_items() {
+            if let Ok(Ok(pos_on_canvas)) = start_pos
+                .checked_down(*row)
+                .map(|res| res.checked_right(*column))
+            {
+                if let Ok(color) = P::ColorType::try_from(pixel.color().clone()) {
+                    canvas
+                        .table_mut()
+                        .get_pixel_mut(pos_on_canvas)
+                        .update_color(color);
+                }
+            }
+        }
+    } else {
+        // If the pixel is not transparent, we can't skip the empty pixels (which is withe by default).
+        for pixel in me.iter_pixels() {
+            let (row, column) = pixel.index();
             if let Ok(Ok(pos_on_canvas)) = start_pos
                 .checked_down(row)
                 .map(|res| res.checked_right(column))
             {
                 if let Ok(color) = P::ColorType::try_from(pixel.color().clone()) {
-                    canvas.table_mut()[pos_on_canvas].update_color(color);
+                    canvas
+                        .table_mut()
+                        .get_pixel_mut(pos_on_canvas)
+                        .update_color(color);
                 }
             }
         }
     }
 }
 
-impl<const H: usize, const W: usize, MP: PixelInterface> Drawable<H, W, MP> for PixelTable<H, W, MP>
+impl<const H: usize, const W: usize, MP: PixelInterface + Default> Drawable<H, W, MP>
+    for PixelTable<H, W, MP>
 where
     MP::ColorType: Clone,
 {
@@ -88,7 +109,7 @@ where
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<HC, WC, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
@@ -96,7 +117,7 @@ where
     }
 }
 
-impl<const H: usize, const W: usize, MP: PixelInterface> Drawable<H, W, MP>
+impl<const H: usize, const W: usize, MP: PixelInterface + Default> Drawable<H, W, MP>
     for PixelCanvas<H, W, MP>
 where
     MP::ColorType: Clone,
@@ -106,7 +127,7 @@ where
         start_pos: impl IntoPixelStrictPosition<HC, WC>,
         canvas: &mut C,
     ) where
-        P: PixelMutInterface,
+        P: PixelMutInterface + PartialEq + Clone + Default,
         C: PixelCanvasMutInterface<HC, WC, P>,
         P::ColorType: TryFrom<MP::ColorType, Error = E>,
     {
@@ -120,7 +141,7 @@ mod tests {
         pixels::{
             canvas::{SharedMutPixelCanvasExt, SharedPixelCanvasExt},
             color::{PixelColor, PixelColorExt},
-            position::{PixelPositionInterface, PixelStrictPosition, StrictPositions},
+            position::{PixelStrictPosition, StrictPositions},
             PixelIterExt, PixelIterMutExt,
         },
         prelude::MaybePixel,
@@ -130,8 +151,8 @@ mod tests {
 
     #[test]
     fn test_drawing_maybe_on_real() {
-        let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
-        let mut my_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::new(None);
+        let mut canvas = PixelCanvas::<5>::default();
+        let mut my_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::default();
 
         my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
         assert!(
@@ -143,18 +164,18 @@ mod tests {
 
         my_5x5_diagonal_line_template
             .iter_pixels_mut()
-            .filter_position(|p| p.column() == p.row())
+            .filter_position(|(row, column)| column == row)
             .update_colors(PixelColor::BLACK);
 
         my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
 
         assert!(canvas
             .iter_pixels()
-            .filter_position(|p| p.column() != p.row())
+            .filter_position(|(row, column)| column != row)
             .all(|pix| pix.color() == &PixelColor::WHITE));
         assert!(canvas
             .iter_pixels()
-            .filter_position(|p| p.column() == p.row())
+            .filter_position(|(row, column)| column == row)
             .all(|pix| pix.color() == &PixelColor::BLACK));
 
         canvas.clear();
@@ -171,22 +192,22 @@ mod tests {
 
     #[test]
     fn test_drawing_on_drawing() {
-        let mut my_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::new(None);
+        let mut my_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::default();
         my_5x5_diagonal_line_template
             .iter_pixels_mut()
-            .filter_position(|p| p.column() == p.row())
+            .filter_position(|(row, column)| column == row)
             .update_colors(PixelColor::RED);
 
-        let mut my_other_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::new(None);
+        let mut my_other_5x5_diagonal_line_template = PixelCanvas::<5, 5, MaybePixel>::default();
         my_other_5x5_diagonal_line_template
             .iter_pixels_mut()
-            .filter_position(|p| p.column() + p.row() == 4)
+            .filter_position(|(row, column)| column + row == 4)
             .update_colors(PixelColor::BLUE);
 
         my_other_5x5_diagonal_line_template
             .draw_on(StrictPositions::TopLeft, &mut my_5x5_diagonal_line_template);
 
-        let mut canvas = PixelCanvas::<5>::new(PixelColor::default());
+        let mut canvas = PixelCanvas::<5>::default();
         my_5x5_diagonal_line_template.draw_on(StrictPositions::TopLeft, &mut canvas);
 
         assert_eq!(
